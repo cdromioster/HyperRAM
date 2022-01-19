@@ -23,6 +23,9 @@ entity trafic_gen is
       avm_readdata_i      : in  std_logic_vector(15 downto 0);
       avm_readdatavalid_i : in  std_logic;
       avm_waitrequest_i   : in  std_logic;
+      address_o           : out std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+      data_exp_o          : out std_logic_vector(15 downto 0);
+      data_read_o         : out std_logic_vector(15 downto 0);
       active_o            : out std_logic;
       error_o             : out std_logic
    );
@@ -84,8 +87,11 @@ begin
                else
                   report "Init completed";
                   if start_i = '1' then
-                     active_o <= '1';
-                     state    <= WRITING_ST;
+                     active_o    <= '1';
+                     address_o   <= (others => '0');
+                     data_exp_o  <= (others => '0');
+                     data_read_o <= (others => '0');
+                     state       <= WRITING_ST;
                   end if;
                end if;
 
@@ -126,14 +132,21 @@ begin
 
                if avm_read_o = '1' and avm_waitrequest_i = '0' then
                   avm_read_o <= '0';
+                  address_o  <= address;
+                  data_exp_o <= (others => '0');
                   state <= VERIFYING_ST;
                end if;
 
             when VERIFYING_ST =>
+
                if avm_readdatavalid_i = '1' then
+                  data_exp_o  <= data;
+                  data_read_o <= avm_readdata_i;
+
                   if avm_readdata_i /= data then
                      report "ERROR: Expected " & to_hstring(data) & ", read " & to_hstring(avm_readdata_i);
                      error_o <= '1';
+                     state   <= STOPPED_ST;
                   end if;
 
                   address <= std_logic_vector(unsigned(address) + 1);
@@ -155,6 +168,13 @@ begin
 
             when STOPPED_ST =>
                state <= STOPPED_ST;
+               if start_i = '1' then
+                  active_o    <= '1';
+                  address_o   <= (others => '0');
+                  data_exp_o  <= (others => '0');
+                  data_read_o <= (others => '0');
+                  state       <= WRITING_ST;
+               end if;
 
          end case;
 
@@ -168,7 +188,6 @@ begin
          end if;
       end if;
    end process p_fsm;
-
 
 end architecture synthesis;
 
