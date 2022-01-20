@@ -20,6 +20,7 @@ architecture simulation of tb is
    signal rst          : std_logic;
    signal led_active   : std_logic;
    signal led_error    : std_logic;
+   signal start        : std_logic;
 
    -- HyperRAM simulation device interface
    signal hr_resetn    : std_logic;
@@ -96,6 +97,18 @@ begin
       wait;
    end process p_rst;
 
+   p_start : process (clk)
+   begin
+      if rising_edge(clk) then
+         if led_active = '1' then
+            start <= '0';
+         end if;
+         if rst = '1' then
+            start <= '1';
+         end if;
+      end if;
+   end process p_start;
+
 
    ---------------------------------------------------------
    -- Instantiate DUT
@@ -110,7 +123,7 @@ begin
          clk_90_i    => clk_90,
          clk_x2_i    => clk_x2,
          rst_i       => rst,
-         start_i     => '1',
+         start_i     => start,
          hr_resetn_o => hr_resetn,
          hr_csn_o    => hr_csn,
          hr_ck_o     => hr_ck,
