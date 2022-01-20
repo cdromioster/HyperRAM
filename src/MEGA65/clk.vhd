@@ -12,7 +12,6 @@ entity clk is
       sys_clk_i    : in  std_logic;   -- expects 100 MHz
       sys_rstn_i   : in  std_logic;   -- Asynchronous, asserted low
       clk_x2_o     : out std_logic;   -- 200 MHz
-      clk_90_o     : out std_logic;   -- 100 MHz delayed 90 degrees
       clk_40_o     : out std_logic;   -- 40 MHz
       rst_o        : out std_logic
    );
@@ -22,17 +21,16 @@ architecture synthesis of clk is
 
    signal clkfb       : std_logic;
    signal clkfb_mmcm  : std_logic;
-   signal clk_90_mmcm : std_logic;
    signal clk_40_mmcm : std_logic;
    signal clk_x2_mmcm : std_logic;
    signal locked      : std_logic;
 
 begin
 
-   -- generate 200 MHz and 100 MHz @ 90 degrees phase shift.
+   -- generate 200 MHz clock.
    -- VCO frequency range for Artix 7 speed grade -1 : 600 MHz - 1200 MHz
    -- f_VCO = f_CLKIN * CLKFBOUT_MULT_F / DIVCLK_DIVIDE   
-   i_clk_x2_90 : MMCME2_ADV
+   i_clk_x2 : MMCME2_ADV
       generic map (
          BANDWIDTH            => "OPTIMIZED",
          CLKOUT4_CASCADE      => FALSE,
@@ -41,28 +39,23 @@ begin
          CLKIN1_PERIOD        => 10.0,       -- INPUT @ 100 MHz
          REF_JITTER1          => 0.010,
          DIVCLK_DIVIDE        => 1,
-         CLKFBOUT_MULT_F      => 8.000,      -- f_VCO = (100 MHz / 1) x 8.000 = 800 MHz
+         CLKFBOUT_MULT_F      => 12.000,      -- f_VCO = (100 MHz / 1) x 12.000 = 1200 MHz
          CLKFBOUT_PHASE       => 0.000,
          CLKFBOUT_USE_FINE_PS => FALSE,
-         CLKOUT0_DIVIDE_F     => 4.000,      -- 200 MHz
+         CLKOUT0_DIVIDE_F     => 6.000,      -- 200 MHz
          CLKOUT0_PHASE        => 0.000,
          CLKOUT0_DUTY_CYCLE   => 0.500,
          CLKOUT0_USE_FINE_PS  => FALSE,
-         CLKOUT1_DIVIDE       => 8,          -- 100 MHz
-         CLKOUT1_PHASE        => 90.000,     -- 90 degrees delayed
+         CLKOUT1_DIVIDE       => 30,         -- 40 MHz
+         CLKOUT1_PHASE        => 0.000,
          CLKOUT1_DUTY_CYCLE   => 0.500,
-         CLKOUT1_USE_FINE_PS  => FALSE,
-         CLKOUT2_DIVIDE       => 20,         -- 40 MHz
-         CLKOUT2_PHASE        => 0.000,
-         CLKOUT2_DUTY_CYCLE   => 0.500,
-         CLKOUT2_USE_FINE_PS  => FALSE
+         CLKOUT1_USE_FINE_PS  => FALSE
       )
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb_mmcm,
          CLKOUT0             => clk_x2_mmcm,
-         CLKOUT1             => clk_90_mmcm,
-         CLKOUT2             => clk_40_mmcm,
+         CLKOUT1             => clk_40_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
          CLKIN1              => sys_clk_i,
@@ -88,7 +81,7 @@ begin
          CLKFBSTOPPED        => open,
          PWRDWN              => '0',
          RST                 => not sys_rstn_i
-      ); -- i_clk_x2_90
+      ); -- i_clk_x2
 
 
    -------------------------------------
@@ -106,12 +99,6 @@ begin
          I => clk_x2_mmcm,
          O => clk_x2_o
       ); -- i_bufg_clk_x2
-
-   i_bufg_clk_90 : BUFG
-      port map (
-         I => clk_90_mmcm,
-         O => clk_90_o
-      ); -- i_bufg_clk_90
 
    i_bufg_clk_40 : BUFG
       port map (

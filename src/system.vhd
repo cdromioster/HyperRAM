@@ -7,25 +7,28 @@ entity system is
       G_ADDRESS_SIZE : integer  -- Number of bits
    );
    port (
-      clk_i       : in    std_logic;
-      clk_90_i    : in    std_logic;
-      clk_x2_i    : in    std_logic;
-      rst_i       : in    std_logic;
-      start_i     : in    std_logic;
+      clk_i         : in  std_logic;
+      clk_x2_i      : in  std_logic;
+      rst_i         : in  std_logic;
+      start_i       : in  std_logic;
 
       -- HyperRAM device interface
-      hr_resetn_o : out   std_logic;
-      hr_csn_o    : out   std_logic;
-      hr_ck_o     : out   std_logic;
-      hr_rwds_io  : inout std_logic;
-      hr_dq_io    : inout std_logic_vector(7 downto 0);
+      hr_resetn_o   : out std_logic;
+      hr_csn_o      : out std_logic;
+      hr_ck_o       : out std_logic;
+      hr_rwds_in_i  : in  std_logic;
+      hr_dq_in_i    : in  std_logic_vector(7 downto 0);
+      hr_rwds_out_o : out std_logic;
+      hr_dq_out_o   : out std_logic_vector(7 downto 0);
+      hr_rwds_oe_o  : out std_logic;
+      hr_dq_oe_o    : out std_logic;
 
-      address_o   : out   std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
-      data_exp_o  : out   std_logic_vector(15 downto 0);
-      data_read_o : out   std_logic_vector(15 downto 0);
+      address_o     : out std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+      data_exp_o    : out std_logic_vector(15 downto 0);
+      data_read_o   : out std_logic_vector(15 downto 0);
 
-      active_o    : out   std_logic;
-      error_o     : out   std_logic
+      active_o      : out std_logic;
+      error_o       : out std_logic
    );
 end entity system;
 
@@ -79,7 +82,6 @@ begin
    i_hyperram : entity work.hyperram
       port map (
          clk_i               => clk_i,
-         clk_90_i            => clk_90_i,
          clk_x2_i            => clk_x2_i,
          rst_i               => rst_i,
          avm_write_i         => avm_write,
@@ -94,8 +96,12 @@ begin
          hr_resetn_o         => hr_resetn_o,
          hr_csn_o            => hr_csn_o,
          hr_ck_o             => hr_ck_o,
-         hr_rwds_io          => hr_rwds_io,
-         hr_dq_io            => hr_dq_io
+         hr_rwds_in_i        => hr_rwds_in_i,
+         hr_dq_in_i          => hr_dq_in_i,
+         hr_rwds_out_o       => hr_rwds_out_o,
+         hr_dq_out_o         => hr_dq_out_o,
+         hr_rwds_oe_o        => hr_rwds_oe_o,
+         hr_dq_oe_o          => hr_dq_oe_o
       ); -- i_hyperram
 
 end architecture synthesis;
