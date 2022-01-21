@@ -69,6 +69,9 @@ architecture synthesis of top is
    signal return_out  : std_logic;
    signal start       : std_logic;
 
+   signal sys_active  : std_logic;
+   signal sys_error   : std_logic;
+
    signal led_active  : std_logic;
    signal led_error   : std_logic;
 
@@ -139,7 +142,7 @@ begin
 
    i_system : entity work.system
       generic map (
-         G_ADDRESS_SIZE => 2       -- 4M entries of 16 bits each.
+         G_ADDRESS_SIZE => 22       -- 4M entries of 16 bits each.
       )
       port map (
          clk_i         => clk_x1,
@@ -155,15 +158,14 @@ begin
          hr_dq_out_o   => hr_dq_out,
          hr_rwds_oe_o  => hr_rwds_oe,
          hr_dq_oe_o    => hr_dq_oe,
-         address_o     => address(1 downto 0),
+         address_o     => address,
          data_exp_o    => data_exp,
          data_read_o   => data_read,
-         active_o      => led_active,
-         error_o       => led_error
+         active_o      => sys_active,
+         error_o       => sys_error
       ); -- i_system
-   address(21 downto 2) <= (others => '0');
 
-   i_cdc: xpm_cdc_array_single                                                                  
+   i_cdc_video: xpm_cdc_array_single
       generic map (
          WIDTH => 56
       )
@@ -175,6 +177,19 @@ begin
          src_in(55 downto 54) => "00",
          dest_clk             => video_clk,
          dest_out             => digits
+      ); -- i_cdc
+
+   i_cdc_keyboard: xpm_cdc_array_single
+      generic map (
+         WIDTH => 2
+      )
+      port map (
+         src_clk      => clk_x1,
+         src_in(0)    => sys_active,
+         src_in(1)    => sys_error,
+         dest_clk     => clk_40,
+         dest_out(0)  => led_active,
+         dest_out(1)  => led_error
       ); -- i_cdc
 
    i_video : entity work.video
@@ -273,12 +288,16 @@ begin
          fastkey_out    => open
       ); -- i_mega65kbd_to_matrix
 
-   p_start : process (clk_x1)
-   begin
-      if rising_edge(clk_x1) then
-         start <= not return_out;
-      end if;
-   end process p_start;
+   i_cdc_start: xpm_cdc_array_single
+      generic map (
+         WIDTH => 1
+      )
+      port map (
+         src_clk     => clk_40,
+         src_in(0)   => not return_out,
+         dest_clk    => clk_x1,
+         dest_out(0) => start
+      ); -- i_cdc_start
 
 end architecture synthesis;
 
