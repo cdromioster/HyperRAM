@@ -54,7 +54,9 @@ architecture synthesis of top is
 
 
    -- clocks
+   signal clk_x1 : std_logic; -- HyperRAM clock
    signal clk_x2 : std_logic; -- Double speed clock
+   signal clk_x4 : std_logic; -- Quadruple speed clock
    signal clk_40 : std_logic; -- Keyboard clock
 
    signal video_clk : std_logic;
@@ -81,6 +83,18 @@ architecture synthesis of top is
    signal hr_rwds_oe   : std_logic;
    signal hr_dq_oe     : std_logic;
 
+   signal sample_csn   : std_logic;
+   signal sample_ck    : std_logic;
+   signal sample_rwds  : std_logic;
+   signal sample_dq    : std_logic_vector(7 downto 0);
+
+   constant C_DEBUG_MODE               : boolean := true;
+   attribute mark_debug                : boolean;
+   attribute mark_debug of sample_csn  : signal is C_DEBUG_MODE;
+   attribute mark_debug of sample_ck   : signal is C_DEBUG_MODE;
+   attribute mark_debug of sample_rwds : signal is C_DEBUG_MODE;
+   attribute mark_debug of sample_dq   : signal is C_DEBUG_MODE;
+
 begin
 
    ----------------------------------
@@ -89,6 +103,16 @@ begin
 
    hr_rwds <= hr_rwds_out when hr_rwds_oe = '1' else 'Z';
    hr_dq   <= hr_dq_out   when hr_dq_oe   = '1' else (others => 'Z');
+
+   p_sample : process (clk_x4)
+   begin
+      if rising_edge(clk_x4) then
+         sample_csn  <= hr_csn;
+         sample_ck   <= hr_ck;
+         sample_rwds <= hr_rwds;
+         sample_dq   <= hr_dq;
+      end if;
+   end process p_sample;
 
 
    i_clk_video : entity work.clk_video
@@ -106,17 +130,19 @@ begin
       (
          sys_clk_i  => clk,
          sys_rstn_i => reset_n,
+         clk_x1_o   => clk_x1,
          clk_x2_o   => clk_x2,
+         clk_x4_o   => clk_x4,
          clk_40_o   => clk_40,
          rst_o      => rst
       ); -- i_clk
 
    i_system : entity work.system
       generic map (
-         G_ADDRESS_SIZE => 22       -- 4M entries of 16 bits each.
+         G_ADDRESS_SIZE => 2       -- 4M entries of 16 bits each.
       )
       port map (
-         clk_i         => clk,
+         clk_i         => clk_x1,
          clk_x2_i      => clk_x2,
          rst_i         => rst,
          start_i       => start,
@@ -129,19 +155,20 @@ begin
          hr_dq_out_o   => hr_dq_out,
          hr_rwds_oe_o  => hr_rwds_oe,
          hr_dq_oe_o    => hr_dq_oe,
-         address_o     => address,
+         address_o     => address(1 downto 0),
          data_exp_o    => data_exp,
          data_read_o   => data_read,
          active_o      => led_active,
          error_o       => led_error
       ); -- i_system
+   address(21 downto 2) <= (others => '0');
 
    i_cdc: xpm_cdc_array_single                                                                  
       generic map (
          WIDTH => 56
       )
       port map (
-         src_clk              => clk,
+         src_clk              => clk_x1,
          src_in(15 downto  0) => data_read,
          src_in(31 downto 16) => data_exp,
          src_in(53 downto 32) => address,
@@ -246,9 +273,9 @@ begin
          fastkey_out    => open
       ); -- i_mega65kbd_to_matrix
 
-   p_start : process (clk)
+   p_start : process (clk_x1)
    begin
-      if rising_edge(clk) then
+      if rising_edge(clk_x1) then
          start <= not return_out;
       end if;
    end process p_start;
