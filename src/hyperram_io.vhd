@@ -50,13 +50,13 @@ architecture synthesis of hyperram_io is
    signal rwds_in_x2_d    : std_logic;
    signal dq_in_x2_d      : std_logic_vector(7 downto 0);
 
-   constant C_DEBUG_MODE              : boolean := false;
    signal rwds_in_d       : std_logic;
    signal rwds_in         : std_logic;
    signal dq_in_d         : std_logic_vector(7 downto 0);
    signal dq_in           : std_logic_vector(7 downto 0);
    signal hr_dq_in        : std_logic_vector(7 downto 0);
 
+   constant C_DEBUG_MODE                : boolean := false;
    attribute mark_debug                 : boolean;
    attribute mark_debug of rwds_in_x2_d : signal is C_DEBUG_MODE;
    attribute mark_debug of dq_in_x2_d   : signal is C_DEBUG_MODE;

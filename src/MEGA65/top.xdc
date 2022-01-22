@@ -54,6 +54,16 @@ create_generated_clock -name clk_40 [get_pins i_clk/i_clk_x2/CLKOUT1]
 create_generated_clock -name clk_x4 [get_pins i_clk/i_clk_x2/CLKOUT2]
 create_generated_clock -name clk_x1 [get_pins i_clk/i_clk_x2/CLKOUT3]
 
+create_generated_clock -name hr_ck \
+   -source [get_pins {i_clk/i_clk_x2/CLKOUT0}] \
+   -divide_by 2 -multiply_by 1 -duty_cycle 50.00 [get_ports {hr_ck}]
+
+set_output_delay -clock [get_clocks {hr_ck}]             -max  1.0 [get_ports {hr_csn hr_rwds hr_dq[*]}]
+set_output_delay -clock [get_clocks {hr_ck}]             -min -1.0 [get_ports {hr_csn hr_rwds hr_dq[*]}]
+set_output_delay -clock [get_clocks {hr_ck}] -clock_fall -max  1.0 [get_ports {hr_csn hr_rwds hr_dq[*]}] -add_delay
+set_output_delay -clock [get_clocks {hr_ck}] -clock_fall -min -1.0 [get_ports {hr_csn hr_rwds hr_dq[*]}] -add_delay
+
+
 
 #############################################################################################################
 # Configuration and Bitstream properties
