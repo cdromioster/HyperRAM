@@ -11,34 +11,34 @@ end entity tb;
 architecture simulation of tb is
 
    -- Testbench signals
-   constant CLK_PERIOD : time := 20 ns;     -- 100 MHz
-   constant DELAY      : time := 2 ns;
-   signal stop_test    : std_logic := '0';
+   constant C_CLK_PERIOD : time := 20 ns;     -- 100 MHz
+   constant C_DELAY      : time := 2 ns;
+   signal stop_test      : std_logic := '0';
 
-   signal clk          : std_logic;
-   signal clk_90       : std_logic;
-   signal clk_x2       : std_logic;
-   signal rst          : std_logic;
-   signal led_active   : std_logic;
-   signal led_error    : std_logic;
-   signal start        : std_logic;
+   signal clk            : std_logic;
+   signal clk_90         : std_logic;
+   signal clk_x2         : std_logic;
+   signal rst            : std_logic;
+   signal led_active     : std_logic;
+   signal led_error      : std_logic;
+   signal start          : std_logic;
 
-   signal sys_resetn   : std_logic;
-   signal sys_csn      : std_logic;
-   signal sys_ck       : std_logic;
-   signal sys_rwds     : std_logic;
-   signal sys_dq       : std_logic_vector(7 downto 0);
-   signal sys_rwds_out : std_logic;
-   signal sys_dq_out   : std_logic_vector(7 downto 0);
-   signal sys_rwds_oe  : std_logic;
-   signal sys_dq_oe    : std_logic;
+   signal sys_resetn     : std_logic;
+   signal sys_csn        : std_logic;
+   signal sys_ck         : std_logic;
+   signal sys_rwds       : std_logic;
+   signal sys_dq         : std_logic_vector(7 downto 0);
+   signal sys_rwds_out   : std_logic;
+   signal sys_dq_out     : std_logic_vector(7 downto 0);
+   signal sys_rwds_oe    : std_logic;
+   signal sys_dq_oe      : std_logic;
 
    -- HyperRAM simulation device interface
-   signal hr_resetn    : std_logic;
-   signal hr_csn       : std_logic;
-   signal hr_ck        : std_logic;
-   signal hr_rwds      : std_logic;
-   signal hr_dq        : std_logic_vector(7 downto 0);
+   signal hr_resetn      : std_logic;
+   signal hr_csn         : std_logic;
+   signal hr_ck          : std_logic;
+   signal hr_rwds        : std_logic;
+   signal hr_dq          : std_logic_vector(7 downto 0);
 
    component s27kl0642 is
       port (
@@ -68,9 +68,9 @@ begin
    begin
       while stop_test = '0' loop
          clk <= '1';
-         wait for CLK_PERIOD/2;
+         wait for C_CLK_PERIOD/2;
          clk <= '0';
-         wait for CLK_PERIOD/2;
+         wait for C_CLK_PERIOD/2;
       end loop;
       wait;
    end process p_clk;
@@ -79,9 +79,9 @@ begin
    begin
       while stop_test = '0' loop
          clk_x2 <= '1';
-         wait for CLK_PERIOD/4;
+         wait for C_CLK_PERIOD/4;
          clk_x2 <= '0';
-         wait for CLK_PERIOD/4;
+         wait for C_CLK_PERIOD/4;
       end loop;
       wait;
    end process p_clk_x2;
@@ -89,7 +89,7 @@ begin
    p_rst : process
    begin
       rst <= '1';
-      wait for 10*CLK_PERIOD;
+      wait for 10*C_CLK_PERIOD;
       wait until clk = '1';
       rst <= '0';
       wait;
@@ -148,8 +148,7 @@ begin
 
    i_wiredelay2_rwds : entity work.wiredelay2
       generic map (
-         DELAY_A_TO_B => DELAY,
-         DELAY_B_TO_A => DELAY
+         G_DELAY => C_DELAY
       )
       port map (
          A => sys_rwds,
@@ -159,8 +158,7 @@ begin
    gen_dq_delay : for i in 0 to 7 generate
    i_wiredelay2_rwds : entity work.wiredelay2
       generic map (
-         DELAY_A_TO_B => DELAY,
-         DELAY_B_TO_A => DELAY
+         G_DELAY => C_DELAY
       )
       port map (
          A => sys_dq(i),

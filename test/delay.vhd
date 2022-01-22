@@ -1,10 +1,11 @@
+-- Copyright: 2/28/01, Ben Cohen, Rev A.
+
 library ieee;
 use ieee.std_logic_1164.all;
 
 entity wiredelay2 is
    generic (
-      DELAY_A_TO_B : time;
-      DELAY_B_TO_A : time
+      G_DELAY : time
    );
    port
    (
@@ -14,7 +15,9 @@ entity wiredelay2 is
 end entity WireDelay2;
 
 architecture simulation of wiredelay2 is
+
 begin
+
    p_ABC0_Lbl: process
       variable ThenTime_v : time;
    begin
@@ -22,9 +25,9 @@ begin
       until ThenTime_v /= now;
       -- Break
       if A'active then
-         wait for Delay_A_to_B; -- wire delay
+         wait for G_DELAY; -- wire delay
       else
-         wait for Delay_B_to_A;
+         wait for G_DELAY;
       end if;
       ThenTime_v := now;
       A <= 'Z';
@@ -35,4 +38,6 @@ begin
       A <= B;
       B <= A;
    end process p_ABC0_Lbl;
+
 end architecture simulation;
+
