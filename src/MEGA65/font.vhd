@@ -8,6 +8,7 @@ entity font is
       G_FONT_FILE : string
    );
    port (
+      clk_i    : in  std_logic;
       char_i   : in  std_logic_vector(7 downto 0);
       bitmap_o : out std_logic_vector(63 downto 0)
    );
@@ -43,7 +44,12 @@ architecture synthesis of font is
 
 begin
 
-   bitmap_o <= bitmaps(to_integer(char_i));
+   p_read : process (clk_i)
+   begin
+      if rising_edge(clk_i) then
+         bitmap_o <= bitmaps(to_integer(char_i));
+      end if;
+   end process p_read;
 
 end architecture synthesis;
 

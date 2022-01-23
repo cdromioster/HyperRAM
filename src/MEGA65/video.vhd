@@ -31,6 +31,15 @@ architecture synthesis of video is
    signal vs        : std_logic;
    signal hs        : std_logic;
    signal de        : std_logic;
+   signal vs_d1     : std_logic;
+   signal hs_d1     : std_logic;
+   signal de_d1     : std_logic;
+   signal vs_d2     : std_logic;
+   signal hs_d2     : std_logic;
+   signal de_d2     : std_logic;
+   signal vs_d3     : std_logic;
+   signal hs_d3     : std_logic;
+   signal de_d3     : std_logic;
    signal pixel     : std_logic_vector(7 downto 0);
 
 begin
@@ -49,6 +58,7 @@ begin
          pixel_y_o => pixel_y
       );
 
+   -- Latency 3 clock cycles
    i_digits : entity work.digits
       generic map (
          G_FONT_FILE   => G_FONT_FILE,
@@ -67,14 +77,26 @@ begin
    video_green_o <= pixel;
    video_blue_o  <= pixel;
 
-   p_pixel : process (clk_i)
+   p_delay : process (clk_i)
    begin
       if rising_edge(clk_i) then
-         video_vs_o    <= vs;
-         video_hs_o    <= hs;
-         video_de_o    <= de;
+         vs_d1 <= vs;
+         hs_d1 <= hs;
+         de_d1 <= de;
+
+         vs_d2 <= vs_d1;
+         hs_d2 <= hs_d1;
+         de_d2 <= de_d1;
+
+         vs_d3 <= vs_d2;
+         hs_d3 <= hs_d2;
+         de_d3 <= de_d2;
       end if;
-   end process p_pixel;
+   end process p_delay;
+
+   video_vs_o <= vs_d3;
+   video_hs_o <= hs_d3;
+   video_de_o <= de_d3;
 
 end architecture synthesis;
 
