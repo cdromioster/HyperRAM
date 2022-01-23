@@ -55,7 +55,7 @@ begin
          CLKOUT1_DUTY_CYCLE   => 0.500,
          CLKOUT1_USE_FINE_PS  => FALSE,
          CLKOUT2_DIVIDE       => 6,          -- 200 MHz phase shifted
-         CLKOUT2_PHASE        => 180.000,
+         CLKOUT2_PHASE        => 240.000,
          CLKOUT2_DUTY_CYCLE   => 0.500,
          CLKOUT2_USE_FINE_PS  => FALSE,
          CLKOUT3_DIVIDE       => 12,         -- 100 MHz

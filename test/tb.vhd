@@ -88,7 +88,7 @@ begin
 
    p_clk_x2_del : process
    begin
-      wait for C_CLK_PERIOD/4;
+      wait for C_CLK_PERIOD/3; -- 240 degrees
 
       while stop_test = '0' loop
          clk_x2_del <= '1';
