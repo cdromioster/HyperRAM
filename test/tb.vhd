@@ -16,8 +16,8 @@ architecture simulation of tb is
    signal stop_test      : std_logic := '0';
 
    signal clk            : std_logic;
-   signal clk_90         : std_logic;
    signal clk_x2         : std_logic;
+   signal clk_x2_del     : std_logic;
    signal rst            : std_logic;
    signal led_active     : std_logic;
    signal led_error      : std_logic;
@@ -86,6 +86,19 @@ begin
       wait;
    end process p_clk_x2;
 
+   p_clk_x2_del : process
+   begin
+      wait for C_CLK_PERIOD/4;
+
+      while stop_test = '0' loop
+         clk_x2_del <= '1';
+         wait for C_CLK_PERIOD/4;
+         clk_x2_del <= '0';
+         wait for C_CLK_PERIOD/4;
+      end loop;
+      wait;
+   end process p_clk_x2_del;
+
    p_rst : process
    begin
       rst <= '1';
@@ -119,6 +132,7 @@ begin
       port map (
          clk_i         => clk,
          clk_x2_i      => clk_x2,
+         clk_x2_del_i  => clk_x2_del,
          rst_i         => rst,
          start_i       => start,
          hr_resetn_o   => sys_resetn,

@@ -13,6 +13,7 @@ entity clk is
       sys_rstn_i   : in  std_logic;   -- Asynchronous, asserted low
       clk_x4_o     : out std_logic;   -- 400 MHz
       clk_x2_o     : out std_logic;   -- 200 MHz
+      clk_x2_del_o : out std_logic;   -- 200 MHz phase shifted
       clk_x1_o     : out std_logic;   -- 100 MHz
       rst_o        : out std_logic
    );
@@ -20,12 +21,13 @@ end entity clk;
 
 architecture synthesis of clk is
 
-   signal clkfb       : std_logic;
-   signal clkfb_mmcm  : std_logic;
-   signal clk_x2_mmcm : std_logic;
-   signal clk_x4_mmcm : std_logic;
-   signal clk_x1_mmcm : std_logic;
-   signal locked      : std_logic;
+   signal clkfb           : std_logic;
+   signal clkfb_mmcm      : std_logic;
+   signal clk_x2_mmcm     : std_logic;
+   signal clk_x2_del_mmcm : std_logic;
+   signal clk_x4_mmcm     : std_logic;
+   signal clk_x1_mmcm     : std_logic;
+   signal locked          : std_logic;
 
 begin
 
@@ -52,17 +54,22 @@ begin
          CLKOUT1_PHASE        => 0.000,
          CLKOUT1_DUTY_CYCLE   => 0.500,
          CLKOUT1_USE_FINE_PS  => FALSE,
-         CLKOUT2_DIVIDE       => 12,         -- 100 MHz
-         CLKOUT2_PHASE        => 0.000,
+         CLKOUT2_DIVIDE       => 6,          -- 200 MHz phase shifted
+         CLKOUT2_PHASE        => 180.000,
          CLKOUT2_DUTY_CYCLE   => 0.500,
-         CLKOUT2_USE_FINE_PS  => FALSE
+         CLKOUT2_USE_FINE_PS  => FALSE,
+         CLKOUT3_DIVIDE       => 12,         -- 100 MHz
+         CLKOUT3_PHASE        => 0.000,
+         CLKOUT3_DUTY_CYCLE   => 0.500,
+         CLKOUT3_USE_FINE_PS  => FALSE
       )
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb_mmcm,
          CLKOUT0             => clk_x4_mmcm,
          CLKOUT1             => clk_x2_mmcm,
-         CLKOUT2             => clk_x1_mmcm,
+         CLKOUT2             => clk_x2_del_mmcm,
+         CLKOUT3             => clk_x1_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
          CLKIN1              => sys_clk_i,
@@ -112,6 +119,12 @@ begin
          I => clk_x2_mmcm,
          O => clk_x2_o
       ); -- i_bufg_clk_x2
+
+   i_bufg_clk_x2_del : BUFG
+      port map (
+         I => clk_x2_del_mmcm,
+         O => clk_x2_del_o
+      ); -- i_bufg_clk_x2_del
 
    i_bufg_clk_x4 : BUFG
       port map (

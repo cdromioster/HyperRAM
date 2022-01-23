@@ -56,9 +56,10 @@ architecture synthesis of top is
 
 
    -- HyperRAM clocks
-   signal clk_x1 : std_logic; -- HyperRAM clock
-   signal clk_x2 : std_logic; -- Double speed clock
-   signal clk_x4 : std_logic; -- Quadruple speed clock
+   signal clk_x1     : std_logic; -- HyperRAM clock
+   signal clk_x2     : std_logic; -- Double speed clock
+   signal clk_x2_del : std_logic; -- Double speed clock, phase shifted
+   signal clk_x4     : std_logic; -- Quadruple speed clock
 
    -- MEGA65 clocks
    signal kbd_clk   : std_logic; -- Keyboard clock
@@ -136,12 +137,13 @@ begin
    i_clk : entity work.clk
       port map
       (
-         sys_clk_i  => clk,
-         sys_rstn_i => reset_n,
-         clk_x1_o   => clk_x1,
-         clk_x2_o   => clk_x2,
-         clk_x4_o   => clk_x4,
-         rst_o      => rst
+         sys_clk_i    => clk,
+         sys_rstn_i   => reset_n,
+         clk_x1_o     => clk_x1,
+         clk_x2_o     => clk_x2,
+         clk_x2_del_o => clk_x2_del,
+         clk_x4_o     => clk_x4,
+         rst_o        => rst
       ); -- i_clk
 
    i_system : entity work.system
@@ -151,6 +153,7 @@ begin
       port map (
          clk_i         => clk_x1,
          clk_x2_i      => clk_x2,
+         clk_x2_del_i  => clk_x2_del,
          rst_i         => rst,
          start_i       => start,
          hr_resetn_o   => hr_resetn,
