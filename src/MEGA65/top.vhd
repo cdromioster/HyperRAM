@@ -36,6 +36,8 @@ end entity top;
 
 architecture synthesis of top is
 
+   constant C_HYPERRAM_FREQ_MHZ : integer := 100;
+
    -- video mode selection: 720p @ 60 Hz
    constant C_VIDEO_MODE : video_modes_t := C_VIDEO_MODE_1280_720_60;
    constant C_FONT_FILE  : string := "font8x8.txt";
@@ -80,7 +82,8 @@ architecture synthesis of top is
    signal data_exp    : std_logic_vector(15 downto 0);
    signal data_read   : std_logic_vector(15 downto 0);
 
-   signal digits      : std_logic_vector(55 downto 0);
+   signal freq_str    : std_logic_vector(11 downto 0);
+   signal digits      : std_logic_vector(67 downto 0);
 
    signal hr_rwds_out  : std_logic;
    signal hr_dq_out    : std_logic_vector(7 downto 0);
@@ -168,7 +171,7 @@ begin
 
    i_cdc_video: xpm_cdc_array_single
       generic map (
-         WIDTH => 56
+         WIDTH => 68
       )
       port map (
          src_clk              => clk_x1,
@@ -176,9 +179,14 @@ begin
          src_in(31 downto 16) => data_exp,
          src_in(53 downto 32) => address,
          src_in(55 downto 54) => "00",
+         src_in(67 downto 56) => freq_str,
          dest_clk             => video_clk,
          dest_out             => digits
       ); -- i_cdc
+
+   freq_str(11 downto 8) <= std_logic_vector(to_unsigned((C_HYPERRAM_FREQ_MHZ/100) mod 10, 4));
+   freq_str( 7 downto 4) <= std_logic_vector(to_unsigned((C_HYPERRAM_FREQ_MHZ/10)  mod 10, 4));
+   freq_str( 3 downto 0) <= std_logic_vector(to_unsigned((C_HYPERRAM_FREQ_MHZ/1)   mod 10, 4));
 
    i_cdc_keyboard: xpm_cdc_array_single
       generic map (
@@ -197,7 +205,7 @@ begin
       generic map
       (
          G_FONT_FILE   => C_FONT_FILE,
-         G_DIGITS_SIZE => 56,
+         G_DIGITS_SIZE => 68,
          G_VIDEO_MODE  => C_VIDEO_MODE
       )
       port map
