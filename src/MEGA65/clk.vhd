@@ -11,10 +11,9 @@ entity clk is
    port (
       sys_clk_i    : in  std_logic;   -- expects 100 MHz
       sys_rstn_i   : in  std_logic;   -- Asynchronous, asserted low
-      clk_x2_o     : out std_logic;   -- 200 MHz
       clk_x4_o     : out std_logic;   -- 400 MHz
+      clk_x2_o     : out std_logic;   -- 200 MHz
       clk_x1_o     : out std_logic;   -- 100 MHz
-      clk_40_o     : out std_logic;   -- 40 MHz
       rst_o        : out std_logic
    );
 end entity clk;
@@ -23,7 +22,6 @@ architecture synthesis of clk is
 
    signal clkfb       : std_logic;
    signal clkfb_mmcm  : std_logic;
-   signal clk_40_mmcm : std_logic;
    signal clk_x2_mmcm : std_logic;
    signal clk_x4_mmcm : std_logic;
    signal clk_x1_mmcm : std_logic;
@@ -43,33 +41,28 @@ begin
          CLKIN1_PERIOD        => 10.0,       -- INPUT @ 100 MHz
          REF_JITTER1          => 0.010,
          DIVCLK_DIVIDE        => 1,
-         CLKFBOUT_MULT_F      => 12.000,      -- f_VCO = (100 MHz / 1) x 12.000 = 1200 MHz
+         CLKFBOUT_MULT_F      => 12.000,     -- f_VCO = (100 MHz / 1) x 12.000 = 1200 MHz
          CLKFBOUT_PHASE       => 0.000,
          CLKFBOUT_USE_FINE_PS => FALSE,
-         CLKOUT0_DIVIDE_F     => 8.000,      -- 200 MHz
+         CLKOUT0_DIVIDE_F     => 3.000,      -- 400 MHz
          CLKOUT0_PHASE        => 0.000,
          CLKOUT0_DUTY_CYCLE   => 0.500,
          CLKOUT0_USE_FINE_PS  => FALSE,
-         CLKOUT1_DIVIDE       => 30,         -- 40 MHz
+         CLKOUT1_DIVIDE       => 6,          -- 200 MHz
          CLKOUT1_PHASE        => 0.000,
          CLKOUT1_DUTY_CYCLE   => 0.500,
          CLKOUT1_USE_FINE_PS  => FALSE,
-         CLKOUT2_DIVIDE       => 4,          -- 400 MHz
+         CLKOUT2_DIVIDE       => 12,         -- 100 MHz
          CLKOUT2_PHASE        => 0.000,
          CLKOUT2_DUTY_CYCLE   => 0.500,
-         CLKOUT2_USE_FINE_PS  => FALSE,
-         CLKOUT3_DIVIDE       => 16,         -- 100 MHz
-         CLKOUT3_PHASE        => 0.000,
-         CLKOUT3_DUTY_CYCLE   => 0.500,
-         CLKOUT3_USE_FINE_PS  => FALSE
+         CLKOUT2_USE_FINE_PS  => FALSE
       )
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb_mmcm,
-         CLKOUT0             => clk_x2_mmcm,
-         CLKOUT1             => clk_40_mmcm,
-         CLKOUT2             => clk_x4_mmcm,
-         CLKOUT3             => clk_x1_mmcm,
+         CLKOUT0             => clk_x4_mmcm,
+         CLKOUT1             => clk_x2_mmcm,
+         CLKOUT2             => clk_x1_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
          CLKIN1              => sys_clk_i,
@@ -125,12 +118,6 @@ begin
          I => clk_x4_mmcm,
          O => clk_x4_o
       ); -- i_bufg_clk_x4
-
-   i_bufg_clk_40 : BUFG
-      port map (
-         I => clk_40_mmcm,
-         O => clk_40_o
-      ); -- i_bufg_clk_40
 
 
    -------------------------------------

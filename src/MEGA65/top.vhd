@@ -53,12 +53,13 @@ architecture synthesis of top is
    signal video_blue  : std_logic_vector(7 downto 0);
 
 
-   -- clocks
+   -- HyperRAM clocks
    signal clk_x1 : std_logic; -- HyperRAM clock
    signal clk_x2 : std_logic; -- Double speed clock
    signal clk_x4 : std_logic; -- Quadruple speed clock
-   signal clk_40 : std_logic; -- Keyboard clock
 
+   -- MEGA65 clocks
+   signal kbd_clk   : std_logic; -- Keyboard clock
    signal video_clk : std_logic;
    signal hdmi_clk  : std_logic;
 
@@ -118,11 +119,12 @@ begin
    end process p_sample;
 
 
-   i_clk_video : entity work.clk_video
+   i_clk_mega65 : entity work.clk_mega65
       port map
       (
          sys_clk_i    => clk,
          sys_rstn_i   => reset_n,
+         kbd_clk_o    => kbd_clk,
          pixel_clk_o  => video_clk,
          pixel_rst_o  => video_rst,
          pixel_clk5_o => hdmi_clk
@@ -136,7 +138,6 @@ begin
          clk_x1_o   => clk_x1,
          clk_x2_o   => clk_x2,
          clk_x4_o   => clk_x4,
-         clk_40_o   => clk_40,
          rst_o      => rst
       ); -- i_clk
 
@@ -187,7 +188,7 @@ begin
          src_clk      => clk_x1,
          src_in(0)    => sys_active,
          src_in(1)    => sys_error,
-         dest_clk     => clk_40,
+         dest_clk     => kbd_clk,
          dest_out(0)  => led_active,
          dest_out(1)  => led_error
       ); -- i_cdc
@@ -277,7 +278,7 @@ begin
 
    i_mega65kbd_to_matrix : entity work.mega65kbd_to_matrix
       port map (
-         cpuclock       => clk_40,
+         cpuclock       => kbd_clk,
          flopled        => led_error,
          powerled       => led_active,
          kio8           => kb_io0,
@@ -293,7 +294,7 @@ begin
          WIDTH => 1
       )
       port map (
-         src_clk     => clk_40,
+         src_clk     => kbd_clk,
          src_in(0)   => not return_out,
          dest_clk    => clk_x1,
          dest_out(0) => start
