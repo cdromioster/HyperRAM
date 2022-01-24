@@ -112,6 +112,10 @@ begin
       ); -- i_clk_video
 
    i_clk : entity work.clk
+      generic map
+      (
+         G_HYPERRAM_FREQ_MHZ => C_HYPERRAM_FREQ_MHZ
+      )
       port map
       (
          sys_clk_i    => clk,
