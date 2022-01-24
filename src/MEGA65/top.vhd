@@ -59,7 +59,6 @@ architecture synthesis of top is
    signal clk_x1     : std_logic; -- HyperRAM clock
    signal clk_x2     : std_logic; -- Double speed clock
    signal clk_x2_del : std_logic; -- Double speed clock, phase shifted
-   signal clk_x4     : std_logic; -- Quadruple speed clock
 
    -- MEGA65 clocks
    signal kbd_clk   : std_logic; -- Keyboard clock
@@ -91,18 +90,6 @@ architecture synthesis of top is
    signal hr_rwds_oe   : std_logic;
    signal hr_dq_oe     : std_logic;
 
-   signal sample_csn   : std_logic;
-   signal sample_ck    : std_logic;
-   signal sample_rwds  : std_logic;
-   signal sample_dq    : std_logic_vector(7 downto 0);
-
-   constant C_DEBUG_MODE               : boolean := true;
-   attribute mark_debug                : boolean;
-   attribute mark_debug of sample_csn  : signal is C_DEBUG_MODE;
-   attribute mark_debug of sample_ck   : signal is C_DEBUG_MODE;
-   attribute mark_debug of sample_rwds : signal is C_DEBUG_MODE;
-   attribute mark_debug of sample_dq   : signal is C_DEBUG_MODE;
-
 begin
 
    ----------------------------------
@@ -111,16 +98,6 @@ begin
 
    hr_rwds <= hr_rwds_out when hr_rwds_oe = '1' else 'Z';
    hr_dq   <= hr_dq_out   when hr_dq_oe   = '1' else (others => 'Z');
-
-   p_sample : process (clk_x4)
-   begin
-      if rising_edge(clk_x4) then
-         sample_csn  <= hr_csn;
-         sample_ck   <= hr_ck;
-         sample_rwds <= hr_rwds;
-         sample_dq   <= hr_dq;
-      end if;
-   end process p_sample;
 
 
    i_clk_mega65 : entity work.clk_mega65
@@ -142,7 +119,6 @@ begin
          clk_x1_o     => clk_x1,
          clk_x2_o     => clk_x2,
          clk_x2_del_o => clk_x2_del,
-         clk_x4_o     => clk_x4,
          rst_o        => rst
       ); -- i_clk
 

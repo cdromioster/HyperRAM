@@ -11,7 +11,6 @@ entity clk is
    port (
       sys_clk_i    : in  std_logic;   -- expects 100 MHz
       sys_rstn_i   : in  std_logic;   -- Asynchronous, asserted low
-      clk_x4_o     : out std_logic;   -- 400 MHz
       clk_x2_o     : out std_logic;   -- 200 MHz
       clk_x2_del_o : out std_logic;   -- 200 MHz phase shifted
       clk_x1_o     : out std_logic;   -- 100 MHz
@@ -25,13 +24,12 @@ architecture synthesis of clk is
    signal clkfb_mmcm      : std_logic;
    signal clk_x2_mmcm     : std_logic;
    signal clk_x2_del_mmcm : std_logic;
-   signal clk_x4_mmcm     : std_logic;
    signal clk_x1_mmcm     : std_logic;
    signal locked          : std_logic;
 
 begin
 
-   -- generate 200 MHz clock.
+   -- generate HyperRAM clock.
    -- VCO frequency range for Artix 7 speed grade -1 : 600 MHz - 1200 MHz
    -- f_VCO = f_CLKIN * CLKFBOUT_MULT_F / DIVCLK_DIVIDE   
    i_clk_x2 : MMCME2_ADV
@@ -46,16 +44,12 @@ begin
          CLKFBOUT_MULT_F      => 12.000,     -- f_VCO = (100 MHz / 1) x 12.000 = 1200 MHz
          CLKFBOUT_PHASE       => 0.000,
          CLKFBOUT_USE_FINE_PS => FALSE,
-         CLKOUT0_DIVIDE_F     => 3.000,      -- 400 MHz
-         CLKOUT0_PHASE        => 0.000,
-         CLKOUT0_DUTY_CYCLE   => 0.500,
-         CLKOUT0_USE_FINE_PS  => FALSE,
          CLKOUT1_DIVIDE       => 6,          -- 200 MHz
          CLKOUT1_PHASE        => 0.000,
          CLKOUT1_DUTY_CYCLE   => 0.500,
          CLKOUT1_USE_FINE_PS  => FALSE,
          CLKOUT2_DIVIDE       => 6,          -- 200 MHz phase shifted
-         CLKOUT2_PHASE        => 240.000,
+         CLKOUT2_PHASE        => 262.500,
          CLKOUT2_DUTY_CYCLE   => 0.500,
          CLKOUT2_USE_FINE_PS  => FALSE,
          CLKOUT3_DIVIDE       => 12,         -- 100 MHz
@@ -66,7 +60,6 @@ begin
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb_mmcm,
-         CLKOUT0             => clk_x4_mmcm,
          CLKOUT1             => clk_x2_mmcm,
          CLKOUT2             => clk_x2_del_mmcm,
          CLKOUT3             => clk_x1_mmcm,
@@ -125,12 +118,6 @@ begin
          I => clk_x2_del_mmcm,
          O => clk_x2_del_o
       ); -- i_bufg_clk_x2_del
-
-   i_bufg_clk_x4 : BUFG
-      port map (
-         I => clk_x4_mmcm,
-         O => clk_x4_o
-      ); -- i_bufg_clk_x4
 
 
    -------------------------------------
