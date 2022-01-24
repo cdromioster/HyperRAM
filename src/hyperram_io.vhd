@@ -45,31 +45,36 @@ architecture synthesis of hyperram_io is
    signal dq_ddr_out_x2   : std_logic_vector(15 downto 0);
 
    -- Input sampling
-   signal csn_in_x2       : std_logic;
-   signal rwds_in_x2      : std_logic;
-   signal dq_in_x2        : std_logic_vector(7 downto 0);
-   signal rwds_in_x2_d    : std_logic;
-   signal dq_in_x2_d      : std_logic_vector(7 downto 0);
+   signal dq_tmp          : std_logic_vector(7 downto 0);
+   signal dq              : std_logic_vector(15 downto 0);
+   signal toggle          : std_logic := '0';
+   signal toggle_1        : std_logic := '0';
 
-   signal rwds_in_d       : std_logic;
-   signal rwds_in         : std_logic;
-   signal dq_in_d         : std_logic_vector(7 downto 0);
-   signal dq_in           : std_logic_vector(7 downto 0);
-   signal hr_dq_in        : std_logic_vector(7 downto 0);
+--   signal csn_in_x2       : std_logic;
+--   signal rwds_in_x2      : std_logic;
+--   signal dq_in_x2        : std_logic_vector(7 downto 0);
+--   signal rwds_in_x2_d    : std_logic;
+--   signal dq_in_x2_d      : std_logic_vector(7 downto 0);
 
-   constant C_DEBUG_MODE                : boolean := false;
-   attribute mark_debug                 : boolean;
-   attribute mark_debug of rwds_in_x2_d : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_x2_d   : signal is C_DEBUG_MODE;
-   attribute mark_debug of rwds_in_x2   : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_x2     : signal is C_DEBUG_MODE;
-   attribute mark_debug of csn_in_x2    : signal is C_DEBUG_MODE;
+--   signal rwds_in_d       : std_logic;
+--   signal rwds_in         : std_logic;
+--   signal dq_in_d         : std_logic_vector(7 downto 0);
+--   signal dq_in           : std_logic_vector(7 downto 0);
+--   signal hr_dq_in        : std_logic_vector(7 downto 0);
 
-   attribute mark_debug of rwds_in_d    : signal is C_DEBUG_MODE;
-   attribute mark_debug of rwds_in      : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_d      : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in        : signal is C_DEBUG_MODE;
-   attribute mark_debug of hr_dq_in     : signal is C_DEBUG_MODE;
+--   constant C_DEBUG_MODE                : boolean := false;
+--   attribute mark_debug                 : boolean;
+--   attribute mark_debug of rwds_in_x2_d : signal is C_DEBUG_MODE;
+--   attribute mark_debug of dq_in_x2_d   : signal is C_DEBUG_MODE;
+--   attribute mark_debug of rwds_in_x2   : signal is C_DEBUG_MODE;
+--   attribute mark_debug of dq_in_x2     : signal is C_DEBUG_MODE;
+--   attribute mark_debug of csn_in_x2    : signal is C_DEBUG_MODE;
+
+--   attribute mark_debug of rwds_in_d    : signal is C_DEBUG_MODE;
+--   attribute mark_debug of rwds_in      : signal is C_DEBUG_MODE;
+--   attribute mark_debug of dq_in_d      : signal is C_DEBUG_MODE;
+--   attribute mark_debug of dq_in        : signal is C_DEBUG_MODE;
+--   attribute mark_debug of hr_dq_in     : signal is C_DEBUG_MODE;
 
 begin
 
@@ -129,43 +134,68 @@ begin
    -- Input sampling
    ------------------------------------------------
 
-   p_pipeline : process (clk_x2_i)
+   p_sample_dq : process (hr_rwds_in_i)
    begin
-      if rising_edge(clk_x2_i) then
-         csn_in_x2    <= hr_csn_o;
-         rwds_in_x2   <= hr_rwds_in_i;
-         dq_in_x2     <= hr_dq_in_i;
-
-         rwds_in_x2_d <= rwds_in_x2;
-         dq_in_x2_d   <= dq_in_x2;
+      report "RWDS";
+      if rising_edge(hr_rwds_in_i) then
+         report "RWDS rising";
+         dq_tmp <= hr_dq_in_i;
       end if;
-   end process p_pipeline;
-
-   p_debug : process (clk_i)
-   begin
-      if rising_edge(clk_i) then
-         rwds_in_d <= rwds_in_x2_d;
-         rwds_in   <= rwds_in_x2;
-         dq_in_d   <= dq_in_x2_d;
-         dq_in     <= dq_in_x2;
-         hr_dq_in  <= hr_dq_in_i;
+      if falling_edge(hr_rwds_in_i) then
+         report "RWDS falling";
+         dq(15 downto 8) <= dq_tmp;
+         dq(7 downto 0)  <= hr_dq_in_i;
+         toggle <= not toggle;
       end if;
-   end process p_debug;
+   end process p_sample_dq;
 
-   p_input : process (clk_i)
+   p_dq : process (clk_i)
    begin
       if rising_edge(clk_i) then
-         ctrl_dq_ie_o <= '0';
-         if rwds_in_x2_d = '1' and rwds_in_x2 = '0' then
-            ctrl_dq_ddr_in_o <= dq_in_x2_d & dq_in_x2;
-            ctrl_dq_ie_o     <= '1';
-         end if;
-         if rwds_in_x2_d = '0' and rwds_in_x2 = '1' then
-            ctrl_dq_ddr_in_o <= dq_in_x2 & hr_dq_in_i;
-            ctrl_dq_ie_o     <= '1';
-         end if;
+         toggle_1         <= toggle;
+         ctrl_dq_ddr_in_o <= dq;
+         ctrl_dq_ie_o     <= toggle_1 xor toggle;
       end if;
-   end process p_input;
+   end process p_dq;
+
+
+--   p_pipeline : process (clk_x2_i)
+--   begin
+--      if rising_edge(clk_x2_i) then
+--         csn_in_x2    <= hr_csn_o;
+--         rwds_in_x2   <= hr_rwds_in_i;
+--         dq_in_x2     <= hr_dq_in_i;
+--
+--         rwds_in_x2_d <= rwds_in_x2;
+--         dq_in_x2_d   <= dq_in_x2;
+--      end if;
+--   end process p_pipeline;
+--
+--   p_debug : process (clk_i)
+--   begin
+--      if rising_edge(clk_i) then
+--         rwds_in_d <= rwds_in_x2_d;
+--         rwds_in   <= rwds_in_x2;
+--         dq_in_d   <= dq_in_x2_d;
+--         dq_in     <= dq_in_x2;
+--         hr_dq_in  <= hr_dq_in_i;
+--      end if;
+--   end process p_debug;
+--
+--   p_input : process (clk_i)
+--   begin
+--      if rising_edge(clk_i) then
+--         ctrl_dq_ie_o <= '0';
+--         if rwds_in_x2_d = '1' and rwds_in_x2 = '0' then
+--            ctrl_dq_ddr_in_o <= dq_in_x2_d & dq_in_x2;
+--            ctrl_dq_ie_o     <= '1';
+--         end if;
+--         if rwds_in_x2_d = '0' and rwds_in_x2 = '1' then
+--            ctrl_dq_ddr_in_o <= dq_in_x2 & hr_dq_in_i;
+--            ctrl_dq_ie_o     <= '1';
+--         end if;
+--      end if;
+--   end process p_input;
 
 end architecture synthesis;
 

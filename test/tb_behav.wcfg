@@ -11,15 +11,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="152127200fs"></ZoomStartTime>
-      <ZoomEndTime time="152244001fs"></ZoomEndTime>
-      <Cursor1Time time="152182500fs"></Cursor1Time>
+      <ZoomStartTime time="303899700fs"></ZoomStartTime>
+      <ZoomEndTime time="303958601fs"></ZoomEndTime>
+      <Cursor1Time time="303930800fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="238"></NameColumnWidth>
-      <ValueColumnWidth column_width="106"></ValueColumnWidth>
+      <ValueColumnWidth column_width="96"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="19" />
+   <WVObjectSize size="23" />
    <wvobject type="logic" fp_name="/tb/stop_test">
       <obj_property name="ElementShortName">stop_test</obj_property>
       <obj_property name="ObjectShortName">stop_test</obj_property>
@@ -27,10 +27,6 @@
    <wvobject type="logic" fp_name="/tb/clk">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb/clk_90">
-      <obj_property name="ElementShortName">clk_90</obj_property>
-      <obj_property name="ObjectShortName">clk_90</obj_property>
    </wvobject>
    <wvobject type="logic" fp_name="/tb/clk_x2">
       <obj_property name="ElementShortName">clk_x2</obj_property>
@@ -175,5 +171,25 @@
    <wvobject type="array" fp_name="/tb/hr_dq">
       <obj_property name="ElementShortName">hr_dq[7:0]</obj_property>
       <obj_property name="ObjectShortName">hr_dq[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/dq_tmp">
+      <obj_property name="ElementShortName">dq_tmp[7:0]</obj_property>
+      <obj_property name="ObjectShortName">dq_tmp[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/dq">
+      <obj_property name="ElementShortName">dq[15:0]</obj_property>
+      <obj_property name="ObjectShortName">dq[15:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/toggle">
+      <obj_property name="ElementShortName">toggle</obj_property>
+      <obj_property name="ObjectShortName">toggle</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/toggle_1">
+      <obj_property name="ElementShortName">toggle_1</obj_property>
+      <obj_property name="ObjectShortName">toggle_1</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/hr_rwds_in_i">
+      <obj_property name="ElementShortName">hr_rwds_in_i</obj_property>
+      <obj_property name="ObjectShortName">hr_rwds_in_i</obj_property>
    </wvobject>
 </wave_config>
