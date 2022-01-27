@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="tb_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="cputypes" />
+            <top_module name="debugtools" />
+            <top_module name="glbl" />
+            <top_module name="tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="150050500fs"></ZoomStartTime>
+      <ZoomEndTime time="150288101fs"></ZoomEndTime>
+      <Cursor1Time time="150123500fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="238"></NameColumnWidth>
+      <ValueColumnWidth column_width="86"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="16" />
+   <wvobject type="logic" fp_name="/tb/stop_test">
+      <obj_property name="ElementShortName">stop_test</obj_property>
+      <obj_property name="ObjectShortName">stop_test</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/clk">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/clk_x2">
+      <obj_property name="ElementShortName">clk_x2</obj_property>
+      <obj_property name="ObjectShortName">clk_x2</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/clk_x4">
+      <obj_property name="ElementShortName">clk_x4</obj_property>
+      <obj_property name="ObjectShortName">clk_x4</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/rst">
+      <obj_property name="ElementShortName">rst</obj_property>
+      <obj_property name="ObjectShortName">rst</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/tb_start">
+      <obj_property name="ElementShortName">tb_start</obj_property>
+      <obj_property name="ObjectShortName">tb_start</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/tb_active">
+      <obj_property name="ElementShortName">tb_active</obj_property>
+      <obj_property name="ObjectShortName">tb_active</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/tb_error">
+      <obj_property name="ElementShortName">tb_error</obj_property>
+      <obj_property name="ObjectShortName">tb_error</obj_property>
+   </wvobject>
+   <wvobject type="group" fp_name="group30">
+      <obj_property name="label">AVM</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/tb/avm_write">
+         <obj_property name="ElementShortName">avm_write</obj_property>
+         <obj_property name="ObjectShortName">avm_write</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/avm_read">
+         <obj_property name="ElementShortName">avm_read</obj_property>
+         <obj_property name="ObjectShortName">avm_read</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/avm_address">
+         <obj_property name="ElementShortName">avm_address[31:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_address[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/avm_writedata">
+         <obj_property name="ElementShortName">avm_writedata[15:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_writedata[15:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/avm_byteenable">
+         <obj_property name="ElementShortName">avm_byteenable[1:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_byteenable[1:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/avm_burstcount">
+         <obj_property name="ElementShortName">avm_burstcount[7:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_burstcount[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/avm_readdata">
+         <obj_property name="ElementShortName">avm_readdata[15:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_readdata[15:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/avm_readdatavalid">
+         <obj_property name="ElementShortName">avm_readdatavalid</obj_property>
+         <obj_property name="ObjectShortName">avm_readdatavalid</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/avm_waitrequest">
+         <obj_property name="ElementShortName">avm_waitrequest</obj_property>
+         <obj_property name="ObjectShortName">avm_waitrequest</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group74">
+      <obj_property name="label">controller</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/request_counter">
+         <obj_property name="ElementShortName">request_counter</obj_property>
+         <obj_property name="ObjectShortName">request_counter</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/read_request">
+         <obj_property name="ElementShortName">read_request</obj_property>
+         <obj_property name="ObjectShortName">read_request</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/write_request">
+         <obj_property name="ElementShortName">write_request</obj_property>
+         <obj_property name="ObjectShortName">write_request</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/address">
+         <obj_property name="ElementShortName">address[26:0]</obj_property>
+         <obj_property name="ObjectShortName">address[26:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/wdata">
+         <obj_property name="ElementShortName">wdata[7:0]</obj_property>
+         <obj_property name="ObjectShortName">wdata[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/wdata_hi">
+         <obj_property name="ElementShortName">wdata_hi[7:0]</obj_property>
+         <obj_property name="ObjectShortName">wdata_hi[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/wen_hi">
+         <obj_property name="ElementShortName">wen_hi</obj_property>
+         <obj_property name="ObjectShortName">wen_hi</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/wen_lo">
+         <obj_property name="ElementShortName">wen_lo</obj_property>
+         <obj_property name="ObjectShortName">wen_lo</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/rdata_hi">
+         <obj_property name="ElementShortName">rdata_hi[7:0]</obj_property>
+         <obj_property name="ObjectShortName">rdata_hi[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/rdata_16en">
+         <obj_property name="ElementShortName">rdata_16en</obj_property>
+         <obj_property name="ObjectShortName">rdata_16en</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/rdata">
+         <obj_property name="ElementShortName">rdata[7:0]</obj_property>
+         <obj_property name="ObjectShortName">rdata[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/data_ready_strobe">
+         <obj_property name="ElementShortName">data_ready_strobe</obj_property>
+         <obj_property name="ObjectShortName">data_ready_strobe</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/busy">
+         <obj_property name="ElementShortName">busy</obj_property>
+         <obj_property name="ObjectShortName">busy</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group31">
+      <obj_property name="label">Device</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/tb/hr_resetn">
+         <obj_property name="ElementShortName">hr_resetn</obj_property>
+         <obj_property name="ObjectShortName">hr_resetn</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/hr_csn">
+         <obj_property name="ElementShortName">hr_csn</obj_property>
+         <obj_property name="ObjectShortName">hr_csn</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/hr_ck">
+         <obj_property name="ElementShortName">hr_ck</obj_property>
+         <obj_property name="ObjectShortName">hr_ck</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/hr_rwds">
+         <obj_property name="ElementShortName">hr_rwds</obj_property>
+         <obj_property name="ObjectShortName">hr_rwds</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/hr_dq">
+         <obj_property name="ElementShortName">hr_dq[7:0]</obj_property>
+         <obj_property name="ObjectShortName">hr_dq[7:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/sys_resetn">
+      <obj_property name="ElementShortName">sys_resetn</obj_property>
+      <obj_property name="ObjectShortName">sys_resetn</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/sys_csn">
+      <obj_property name="ElementShortName">sys_csn</obj_property>
+      <obj_property name="ObjectShortName">sys_csn</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/sys_ck">
+      <obj_property name="ElementShortName">sys_ck</obj_property>
+      <obj_property name="ObjectShortName">sys_ck</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/sys_rwds">
+      <obj_property name="ElementShortName">sys_rwds</obj_property>
+      <obj_property name="ObjectShortName">sys_rwds</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/sys_dq">
+      <obj_property name="ElementShortName">sys_dq[7:0]</obj_property>
+      <obj_property name="ObjectShortName">sys_dq[7:0]</obj_property>
+   </wvobject>
+</wave_config>
