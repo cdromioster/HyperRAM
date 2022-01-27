@@ -5,7 +5,7 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.cputypes.all;
 
-entity hyperram is
+entity hyperram_mega65 is
   generic ( in_simulation : in boolean := false);
   Port ( pixelclock : in STD_LOGIC; -- For slow devices bus interface is
          -- actually on pixelclock to reduce latencies
@@ -69,9 +69,9 @@ entity hyperram is
          hr_cs0 : out std_logic := '1';
          hr_cs1 : out std_logic := '1'
          );
-end hyperram;
+end hyperram_mega65;
 
-architecture gothic of hyperram is
+architecture gothic of hyperram_mega65 is
 
   type state_t is (
     StartupDelay,
