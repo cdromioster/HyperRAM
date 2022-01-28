@@ -410,7 +410,7 @@ architecture gothic of hyperram_mega65 is
   signal prefetch_when_idle : boolean := false;
 
 begin
-  process (pixelclock,clock163,clock325,hr_clk,hr_clk_phaseshift) is
+  process (pixelclock,clock163,clock325) is
     variable clock_status_vector : unsigned(4 downto 0);
     variable tempaddr : unsigned(26 downto 0);
     variable show_cache0 : boolean := false;

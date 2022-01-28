@@ -13,13 +13,13 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="150050500fs"></ZoomStartTime>
-      <ZoomEndTime time="150288101fs"></ZoomEndTime>
-      <Cursor1Time time="150123500fs"></Cursor1Time>
+      <ZoomStartTime time="150219132fs"></ZoomStartTime>
+      <ZoomEndTime time="150592174fs"></ZoomEndTime>
+      <Cursor1Time time="150530000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="238"></NameColumnWidth>
-      <ValueColumnWidth column_width="86"></ValueColumnWidth>
+      <ValueColumnWidth column_width="81"></ValueColumnWidth>
    </column_width_setting>
    <WVObjectSize size="16" />
    <wvobject type="logic" fp_name="/tb/stop_test">
@@ -150,6 +150,26 @@
       <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/busy">
          <obj_property name="ElementShortName">busy</obj_property>
          <obj_property name="ObjectShortName">busy</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/pixelclock">
+         <obj_property name="ElementShortName">pixelclock</obj_property>
+         <obj_property name="ObjectShortName">pixelclock</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/clock163">
+         <obj_property name="ElementShortName">clock163</obj_property>
+         <obj_property name="ObjectShortName">clock163</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/clock325">
+         <obj_property name="ElementShortName">clock325</obj_property>
+         <obj_property name="ObjectShortName">clock325</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/hr_clk">
+         <obj_property name="ElementShortName">hr_clk</obj_property>
+         <obj_property name="ObjectShortName">hr_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/hr_clk_phaseshift">
+         <obj_property name="ElementShortName">hr_clk_phaseshift</obj_property>
+         <obj_property name="ObjectShortName">hr_clk_phaseshift</obj_property>
       </wvobject>
    </wvobject>
    <wvobject type="group" fp_name="group31">

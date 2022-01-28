@@ -83,6 +83,7 @@ begin
 
    p_clk_x2 : process
    begin
+      wait for 1 ps;
       while stop_test = '0' loop
          clk_x2 <= '1';
          wait for C_CLK_PERIOD/4;
@@ -94,6 +95,7 @@ begin
 
    p_clk_x4 : process
    begin
+      wait for 2 ps;
       while stop_test = '0' loop
          clk_x4 <= '1';
          wait for C_CLK_PERIOD/8;
