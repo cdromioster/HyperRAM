@@ -504,15 +504,11 @@ begin
         end if;
       end if;
 
-      if cache_enabled then
-        busy <= busy_internal or write_blocked or queued_write or queued2_write or (not start_delay_expired);
-      else
-        -- With no cache, we have to IMMEDIATELY assert busy when we see a
-        -- request to avoid a race-condition with slow_devices
-        busy <= busy_internal or write_blocked or queued_write or queued2_write
-                or read_request or write_request or read_request_latch or write_request_latch
-                or (not start_delay_expired);
-      end if;
+      -- With no cache, we have to IMMEDIATELY assert busy when we see a
+      -- request to avoid a race-condition with slow_devices
+      busy <= busy_internal or write_blocked or queued_write or queued2_write
+              or read_request or write_request or read_request_latch or write_request_latch
+              or (not start_delay_expired);
 
       if write_blocked = '1' and first_transaction='0' then
 --        report "DISPATCH: write_blocked asserted. Waiting for existing writes to flush...";
@@ -687,275 +683,6 @@ begin
             mark_cache_for_prefetch <= not mark_cache_for_prefetch;
           end if;
 
-        elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = write_collect0_address and write_collect0_valids(to_integer(address(2 downto 0))) = '1') then
-          -- Write cache read-back
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= write_collect0_data(to_integer(address(2 downto 0)));
-          report "DISPATCH: Returning data $"& to_hstring(write_collect0_data(to_integer(address(2 downto 0))))&" from write collect0";
-        elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = write_collect0_address
-                                                    and write_collect0_valids(to_integer(address(2 downto 1)&"0")) = '1'
-                                                    and write_collect0_valids(to_integer(address(2 downto 1)&"1")) = '1') then
-          -- Write cache read-back
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= write_collect0_data(to_integer(address(2 downto 1)&"0"));
-          fake_rdata_hi <= write_collect0_data(to_integer(address(2 downto 1)&"1"));
-          report "DISPATCH: Returning data $"& to_hstring(write_collect0_data(to_integer(address(2 downto 0))))&" from write collect0";
-        elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = write_collect1_address and write_collect1_valids(to_integer(address(2 downto 0))) = '1') then
-          -- Write cache read-back
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= write_collect1_data(to_integer(address(2 downto 0)));
-          report "DISPATCH: Returning data $"& to_hstring(write_collect1_data(to_integer(address(2 downto 0))))&" from write collect1";
-        elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = write_collect1_address
-                                                    and write_collect1_valids(to_integer(address(2 downto 1)&"0")) = '1'
-                                                    and write_collect1_valids(to_integer(address(2 downto 1)&"1")) = '1') then
-          -- Write cache read-back
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= write_collect1_data(to_integer(address(2 downto 1)&"0"));
-          fake_rdata_hi <= write_collect1_data(to_integer(address(2 downto 1)&"1"));
-          report "DISPATCH: Returning data $"& to_hstring(write_collect1_data(to_integer(address(2 downto 0))))&" from write collect1";
-        elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = cache_row0_address and cache_row0_valids(to_integer(address(2 downto 0))) = '1') then
-          -- Cache reads
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= cache_row0_data(to_integer(address(2 downto 0)));
-          report "DISPATCH: Returning data $"& to_hstring(cache_row0_data(to_integer(address(2 downto 0))))&" from cache row0";
-        elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = cache_row0_address
-                                                    and cache_row0_valids(to_integer(address(2 downto 1)&"0")) = '1'
-                                                    and cache_row0_valids(to_integer(address(2 downto 1)&"1")) = '1') then
-          -- Cache reads
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= cache_row0_data(to_integer(address(2 downto 1)&"0"));
-          fake_rdata_hi <= cache_row0_data(to_integer(address(2 downto 1)&"1"));
-          report "DISPATCH: Returning data $"& to_hstring(cache_row0_data(to_integer(address(2 downto 0))))&" from cache row0";
-        elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = cache_row1_address and cache_row1_valids(to_integer(address(2 downto 0))) = '1') then
-          -- Cache read
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= cache_row1_data(to_integer(address(2 downto 0)));
-          report "DISPATCH: Returning data $"& to_hstring(cache_row1_data(to_integer(address(2 downto 0))))&" from cache row1";
-        elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = cache_row1_address
-                                                    and cache_row1_valids(to_integer(address(2 downto 1)&"0"))='1'
-                                                    and cache_row1_valids(to_integer(address(2 downto 1)&"1"))='1') then
-
-          -- Cache read
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= cache_row1_data(to_integer(address(2 downto 1)&"0"));
-          fake_rdata_hi <= cache_row1_data(to_integer(address(2 downto 1)&"1"));
-          report "DISPATCH: Returning data $"& to_hstring(cache_row1_data(to_integer(address(2 downto 0))))&" from cache row1";
-        elsif address(23 downto 8) = x"00000" and address(25 downto 24) = "11" then
-          -- $B0000xx for now for debugging caches etc
-          case address(7 downto 0) is
-            when x"00" => fake_rdata(7) <= '1';
-                          fake_rdata(6 downto 3) <= (others => '0');
-                          fake_rdata(2 downto 0) <= cache_row0_address(23 downto 21);
-            when x"01" => fake_rdata <= cache_row0_address(20 downto 13);
-            when x"02" => fake_rdata <= cache_row0_address(12 downto 5);
-            when x"03" => fake_rdata(7 downto 3) <= cache_row0_address(4 downto 0);
-                          fake_rdata(2 downto 0) <= "000";
-            when x"04" => fake_rdata <= unsigned(cache_row0_valids);
-            when x"05" => fake_rdata <= x"AA";
-            when x"06" => fake_rdata <= x"AA";
-            when x"07" => fake_rdata <= x"AA";
-            when x"08"|x"09"|x"0a"|x"0b"|x"0c"|x"0d"|x"0e"|x"0f" =>
-              fake_rdata <= cache_row0_data(to_integer(address(2 downto 0)));
-
-            when x"10" => fake_rdata(7) <= '1';
-                          fake_rdata(6 downto 3) <= (others => '0');
-                          fake_rdata(2 downto 0) <= cache_row1_address(23 downto 21);
-            when x"11" => fake_rdata <= cache_row1_address(20 downto 13);
-            when x"12" => fake_rdata <= cache_row1_address(12 downto 5);
-            when x"13" => fake_rdata(7 downto 3) <= cache_row1_address(4 downto 0);
-                          fake_rdata(2 downto 0) <= "000";
-            when x"14" => fake_rdata <= unsigned(cache_row1_valids);
-            when x"15" => fake_rdata <= x"AA";
-            when x"16" => fake_rdata <= x"AA";
-            when x"17" => fake_rdata <= x"AA";
-            when x"18"
-              |  x"19"
-              |  x"1a"
-              |  x"1b"
-              |  x"1c"
-              |  x"1d"
-              |  x"1e"
-              |  x"1f" => fake_rdata <= cache_row1_data(to_integer(address(2 downto 0)));
-
-            when x"20" => fake_rdata <= write_collect0_address(23 downto 16);
-            when x"21" => fake_rdata <= write_collect0_address(15 downto 8);
-            when x"22" => fake_rdata(7 downto 3) <= write_collect0_address(7 downto 3);
-                          fake_rdata(2 downto 0) <= "000";
-            when x"23" => fake_rdata <= x"AA";
-            when x"24" => fake_rdata <= unsigned(write_collect0_valids);
-            when x"25" => fake_rdata <= x"AA";
-            when x"26" => fake_rdata <= x"00";
-                          fake_rdata(4) <= write_collect0_dispatchable;
-                          fake_rdata(1) <= write_collect0_toolate;
-                          fake_rdata(0) <= write_collect0_flushed;
-            when x"27" => fake_rdata <= x"AA";
-            when x"28"
-              |  x"29"
-              |  x"2a"
-              |  x"2b"
-              |  x"2c"
-              |  x"2d"
-              |  x"2e"
-              |  x"2f" => fake_rdata <= write_collect0_data(to_integer(address(2 downto 0)));
-
-            when x"30" => fake_rdata <= write_collect1_address(23 downto 16);
-            when x"31" => fake_rdata <= write_collect1_address(15 downto 8);
-            when x"32" => fake_rdata(7 downto 3) <= write_collect1_address(7 downto 3);
-                          fake_rdata(2 downto 0) <= "000";
-            when x"33" => fake_rdata <= x"AA";
-            when x"34" => fake_rdata <= unsigned(write_collect1_valids);
-            when x"35" => fake_rdata <= x"AA";
-            when x"36" => fake_rdata <= x"00";
-                          fake_rdata(4) <= write_collect1_dispatchable;
-                          fake_rdata(1) <= write_collect1_toolate;
-                          fake_rdata(0) <= write_collect1_flushed;
-            when x"37" => fake_rdata <= x"AA";
-            when x"38"
-              |  x"39"
-              |  x"3a"
-              |  x"3b"
-              |  x"3c"
-              |  x"3d"
-              |  x"3e"
-              |  x"3f" => fake_rdata <= write_collect1_data(to_integer(address(2 downto 0)));
-
-            when x"40" => fake_rdata <= block_address(23 downto 16);
-            when x"41" => fake_rdata <= block_address(15 downto 8);
-            when x"42" => fake_rdata(7 downto 5) <= block_address(7 downto 5);
-                          fake_rdata(4 downto 0) <= "00000";
-            when x"43" => fake_rdata <= x"AA";
-            when x"44" => fake_rdata <= x"00";
-                          if (block_valid='1') then fake_rdata <= x"FF"; end if;
-
-            when x"50"
-              |  x"51"
-              |  x"52"
-              |  x"53"
-              |  x"54"
-              |  x"55"
-              |  x"56"
-              |  x"57" => fake_rdata <= block_data(0)(to_integer(address(2 downto 0)));
-            when x"58"
-              |  x"59"
-              |  x"5a"
-              |  x"5b"
-              |  x"5c"
-              |  x"5d"
-              |  x"5e"
-              |  x"5f" => fake_rdata <= block_data(1)(to_integer(address(2 downto 0)));
-
-
-            when x"60"
-              |  x"61"
-              |  x"62"
-              |  x"63"
-              |  x"64"
-              |  x"65"
-              |  x"66"
-              |  x"67" => fake_rdata <= block_data(2)(to_integer(address(2 downto 0)));
-            when x"68"
-              |  x"69"
-              |  x"6a"
-              |  x"6b"
-              |  x"6c"
-              |  x"6d"
-              |  x"6e"
-              |  x"6f" => fake_rdata <= block_data(3)(to_integer(address(2 downto 0)));
-
-            when x"80" => fake_rdata <= viciv_request_count(31 downto 24);
-            when x"81" => fake_rdata <= viciv_request_count(23 downto 16);
-            when x"82" => fake_rdata <= viciv_request_count(15 downto 8);
-            when x"83" => fake_rdata <= viciv_request_count( 7 downto 0);
-
-            when x"90" => fake_rdata(2 downto 0) <= current_cache_line_address_drive(26 downto 24);
-                          fake_rdata(7) <= '1';
-                          fake_rdata(6 downto 3) <= "0000";
-            when x"91" => fake_rdata <= current_cache_line_address_drive(23 downto 16);
-            when x"92" => fake_rdata <= current_cache_line_address_drive(15 downto 8);
-            when x"93" => fake_rdata(7 downto 3) <= current_cache_line_address_drive( 7 downto 3);
-                          fake_rdata(2 downto 0) <= "000";
-            when x"94" => fake_rdata <= (others => current_cache_line_valid_drive);
-
-            when x"98"
-              |  x"99"
-              |  x"9a"
-              |  x"9b"
-              |  x"9c"
-              |  x"9d"
-              |  x"9e"
-              |  x"9f" => fake_rdata <= current_cache_line_drive(to_integer(address(2 downto 0)));
-
-
-            when others => fake_rdata <= x"BF";
-          end case;
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          report "asserting data_ready_strobe for fake read";
-        elsif address(23 downto 4) = x"FFFFF" and address(25 downto 24) = "11" then
-          -- Allow reading from dummy debug bitbash registers at $BFFFFFx
-          case address(3 downto 0) is
-            when x"0" =>
-              fake_rdata <= to_unsigned(write_continues_max,8);
-            when x"1" =>
-              fake_rdata <= viciv_bank;
-            when x"2" =>
-              fake_rdata(0) <= fast_cmd_mode;
-              fake_rdata(1) <= fast_read_mode;
-              fake_rdata(2) <= fast_write_mode;
-              fake_rdata(3) <= read_phase_shift;
-              fake_rdata(4) <= block_read_enable;
-              fake_rdata(5) <= flag_prefetch;
-              fake_rdata(6) <= enable_current_cache_line;
-              if cache_enabled then
-                fake_rdata(7) <= '1';
-              else
-                fake_rdata(7) <= '0';
-              end if;
-            when x"3" =>
-              fake_rdata <= write_latency;
-            when x"4" =>
-              fake_rdata <= extra_write_latency;
-            when x"5" =>
-              fake_rdata <= to_unsigned(read_time_adjust,8);
-            when x"6" =>
-              fake_rdata <= rwr_delay;
-            when x"7" =>
-              fake_rdata <= unsigned(cache_row0_valids);
-            when x"8" =>
-              fake_rdata <= conf_buf0;
-            when x"9" =>
-              fake_rdata <= conf_buf1;
-
-            when x"a" =>
-              fake_rdata <= cache_row0_address(7 downto 0);
-            when x"b" =>
-              fake_rdata <= cache_row0_address(15 downto 8);
-            when x"c" =>
-              fake_rdata <= cache_row0_address(23 downto 16);
-
-            when x"d" =>
-              fake_rdata <= write_latency2;
-            when x"e" =>
-              fake_rdata <= extra_write_latency2;
-            when x"f" =>
-              fake_rdata <= x"00";
-              fake_rdata(0) <= viciv_data_debug;
-              fake_rdata(1) <= viciv_debug_priority;
-            when others =>
-              -- This seems to be what gets returned all the time
-              fake_rdata <= x"42";
-          end case;
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          report "asserting data_ready_strobe for fake read";
         elsif request_accepted = request_toggle then
           -- Normal RAM read.
           report "request_toggle flipped";
@@ -1003,48 +730,6 @@ begin
         write_request_latch <= '0';
 
         if address(23 downto 4) = x"FFFFF" and address(25 downto 24) = "11" then
-          case address(3 downto 0) is
-            when x"0" =>
-              write_continues_max <= to_integer(wdata);
-            when x"1" =>
-              viciv_bank <= wdata;
-            when x"2" =>
-              fast_cmd_mode <= wdata(0);
-              fast_read_mode <= wdata(1);
-              fast_write_mode <= wdata(2);
-              read_phase_shift <= wdata(3);
-              block_read_enable <= wdata(4);
-              flag_prefetch <= wdata(5);
-              enable_current_cache_line <= wdata(6);
-              if wdata(7)='1' then
-                cache_enabled <= true;
-              else
-                cache_enabled <= false;
-              end if;
-            when x"3" =>
-              write_latency <= wdata;
-            when x"4" =>
-              extra_write_latency <= wdata;
-            when x"5" =>
-              read_time_adjust <= to_integer(wdata);
-            when x"6" =>
-              rwr_delay <= wdata;
-            when x"8" =>
-              conf_buf0_in <= wdata;
-              conf_buf0_set <= not conf_buf0_set;
-            when x"9" =>
-              conf_buf1_in <= wdata;
-              conf_buf1_set <= not conf_buf1_set;
-            when x"d" =>
-              write_latency2 <= wdata;
-            when x"e" =>
-              extra_write_latency2 <= wdata;
-            when x"f" =>
-              viciv_data_debug <= wdata(0);
-              viciv_debug_priority <= wdata(1);
-            when others =>
-              null;
-          end case;
           report "asserting fake_data_ready_strobe";
           fake_data_ready_strobe <= '1';
         else
@@ -1055,15 +740,6 @@ begin
             -- Do normal  write request
             report "request_toggle flipped";
             report "DISPATCH: Accepted non-cached write";
-            ram_prefetch <= false;
-            ram_normalfetch <= true;
-            request_toggle <= not request_toggle;
-            ram_reading <= '0';
-            ram_address <= address;
-            ram_wdata <= wdata;
-            ram_wdata_hi <= wdata_hi;
-            ram_wdata_enlo <= wen_lo;
-            ram_wdata_enhi <= wen_hi;
           else
             -- Collect writes together for dispatch
 
@@ -1572,14 +1248,12 @@ begin
       end if;
 
 
-      -- Invalidate cache if disabled
-      if cache_enabled = false then
-        report "Zeroing cache_row0_valids";
-        cache_row0_valids <= (others => '0');
-        cache_row1_valids <= (others => '0');
-        current_cache_line_valid_drive <= '0';
-        block_valid <= '0';
-      end if;
+      -- Invalidate cache
+      report "Zeroing cache_row0_valids";
+      cache_row0_valids <= (others => '0');
+      cache_row1_valids <= (others => '0');
+      current_cache_line_valid_drive <= '0';
+      block_valid <= '0';
 
       if current_cache_line_update_all = last_current_cache_line_update_all then
         if current_cache_line_update_address = current_cache_line_address_drive then
@@ -1745,9 +1419,7 @@ begin
           read_request_held <= '0';
           write_request_held <= '0';
 
-          if not cache_enabled then
-            busy_internal <= '0';
-          end if;
+          busy_internal <= '0';
 
           first_transaction <= '0';
           is_block_read <= false;
@@ -2113,10 +1785,8 @@ begin
 
           report "Preparing hr_command etc for write to $" & to_hstring(ram_address);
 
-          if not cache_enabled then
-            background_write_count <= 2;
-            background_write <= '0';
-          end if;
+          background_write_count <= 2;
+          background_write <= '0';
 
           config_reg_write <= ram_address(25);
 
@@ -3180,14 +2850,6 @@ begin
             report "DISPATCH: Clearing is_expected_to_respond";
             is_expected_to_respond <= false;
           end if;
-          -- Clear busy flag as soon as we can, allowing for pipelining
-          -- through to and from slow_devices, so that we don't waste time,
-          -- but also that we avoid doing it too early and screwing things up.
-          if byte_phase = 4 then
-            if is_block_read and cache_enabled then
-              busy_internal <= '0';
-            end if;
-          end if;
 
           hr_clk_phaseshift <= read_phase_shift xor hyperram1_select;
 
@@ -3295,18 +2957,6 @@ begin
                 end if;
                 show_cache1 := true;
               end if;
-            elsif (byte_phase = 8) and is_expected_to_respond then
-              -- Export the appropriate cache line to slow_devices
-              if hyperram_access_address_matches_cache_row0 = '1' and cache_enabled and (not is_vic_fetch) then
-                if cache_row0_valids = x"FF" then
-                end if;
-              elsif hyperram_access_address_matches_cache_row1 = '1' and cache_enabled and (not is_vic_fetch) then
-                if cache_row1_valids = x"FF" then
-                  current_cache_line_drive <= cache_row1_data;
-                  current_cache_line_address_drive(26 downto 3) <= hyperram_access_address(26 downto 3);
-                  current_cache_line_valid_drive <= '1';
-                end if;
-              end if;
             end if;
 
             -- Quickly return the correct byte
@@ -3390,9 +3040,6 @@ begin
             -- not busy. We are just filling in time...
             if busy_internal = '1' then
               report "DISPATCH: Clearing busy during tail of pre-fetch";
-            end if;
-            if cache_enabled then
-              busy_internal <= '0';
             end if;
           end if;
           -- After we have read the first 8 bytes, we know that we are no longer
@@ -3531,21 +3178,6 @@ begin
                     cache_row1_data(to_integer(byte_phase)) <= hr2_d;
                   end if;
                   show_cache1 := true;
-                end if;
-              else
-                -- Export the appropriate cache line to slow_devices
-                if hyperram_access_address_matches_cache_row0 = '1' and cache_enabled and (not is_vic_fetch) then
-                  if cache_row0_valids = x"FF" then
-                    current_cache_line_drive <= cache_row0_data;
-                    current_cache_line_address_drive(26 downto 3) <= hyperram_access_address(26 downto 3);
-                    current_cache_line_valid_drive <= '1';
-                  end if;
-                elsif hyperram_access_address_matches_cache_row1 = '1' and cache_enabled and (not is_vic_fetch) then
-                  if cache_row1_valids = x"FF" then
-                    current_cache_line_drive <= cache_row1_data;
-                    current_cache_line_address_drive(26 downto 3) <= hyperram_access_address(26 downto 3);
-                    current_cache_line_valid_drive <= '1';
-                  end if;
                 end if;
               end if;
 
