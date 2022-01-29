@@ -160,7 +160,7 @@ begin
    -- Instantiate HyperRAM controller
    --------------------------------------------------------
 
-   i_hyperram : entity work.hyperram
+   i_hyperram_wrapper : entity work.hyperram_wrapper
       port map (
          clk_i               => clk,
          clk_x2_i            => clk_x2,

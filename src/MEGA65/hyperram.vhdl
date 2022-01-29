@@ -302,7 +302,7 @@ architecture gothic of hyperram_mega65 is
   signal fake_rdata : unsigned(7 downto 0) := x"00";
   signal fake_rdata_hi : unsigned(7 downto 0) := x"00";
 
-  signal request_counter_int : std_logic := '0';
+  signal request_counter_int : std_logic := '1';
 
 
   signal hr_rwds_high_seen : std_logic := '0';
@@ -355,7 +355,8 @@ architecture gothic of hyperram_mega65 is
   -- to give the HyperRAM chip time to start up
   -- Datasheet says 150usec is required, we do that, plus a bit.
   signal start_delay_counter : integer
-    := 150*(1000/162)+20
+--    := 150*(1000/162)+20
+    := 150*200+20
     -- plus a correction factor to get initial config register write correctly
     -- aligned with the clock
     +2;

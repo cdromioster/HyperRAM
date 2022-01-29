@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity hyperram is
+entity hyperram_wrapper is
    port (
       clk_i               : in    std_logic; -- Main clock
       clk_x2_i            : in    std_logic; -- Physical I/O only
@@ -27,9 +27,9 @@ entity hyperram is
       hr_rwds_io          : inout std_logic;
       hr_dq_io            : inout unsigned(7 downto 0)
    );
-end entity hyperram;
+end entity hyperram_wrapper;
 
-architecture synthesis of hyperram is
+architecture synthesis of hyperram_wrapper is
 
    signal read_request      : std_logic;
    signal write_request     : std_logic;
@@ -44,20 +44,24 @@ architecture synthesis of hyperram is
    signal data_ready_strobe : std_logic;
    signal busy              : std_logic;
 
+   signal wait_for_read     : std_logic;
+
 begin
+
+   rdata_16en <= '1';
 
    p_convert : process (clk_i)
    begin
       if rising_edge(clk_i) then
          write_request <= '0';
          read_request  <= '0';
-         if busy = '0' and write_request = '0' and read_request = '0' then
+         if busy = '0' and write_request = '0' and wait_for_read = '0' then
             avm_waitrequest_o <= '0';
          end if;
 
          if avm_write_i = '1' and avm_waitrequest_o = '0' and busy = '0' then
             write_request     <= '1';
-            address           <= unsigned(avm_address_i(26 downto 0));
+            address           <= unsigned(avm_address_i(25 downto 0)) & '0';
             wdata             <= unsigned(avm_writedata_i(7 downto 0));
             wdata_hi          <= unsigned(avm_writedata_i(15 downto 8));
             wen_hi            <= avm_byteenable_i(1);
@@ -67,19 +71,26 @@ begin
 
          if avm_read_i = '1' and avm_waitrequest_o = '0' and busy = '0' then
             read_request      <= '1';
-            address           <= unsigned(avm_address_i(26 downto 0));
+            address           <= unsigned(avm_address_i(25 downto 0)) & '0';
             avm_waitrequest_o <= '1';
+            wait_for_read     <= '1';
+         end if;
+
+         avm_readdata_o(15 downto 8) <= std_logic_vector(rdata_hi);
+         avm_readdata_o( 7 downto 0) <= std_logic_vector(rdata);
+         avm_readdatavalid_o         <= data_ready_strobe;
+
+         if data_ready_strobe = '1' then
+            wait_for_read <= '0';
          end if;
 
          if rst_i = '1' then
-            avm_waitrequest_o <= '0';
+            avm_waitrequest_o <= '1';
+            wait_for_read     <= '0';
          end if;
       end if;
    end process p_convert;
 
-
-   avm_readdata_o(15 downto 8) <= std_logic_vector(rdata_hi);
-   avm_readdata_o( 7 downto 0) <= std_logic_vector(rdata);
 
    i_hyperram_mega65 : entity work.hyperram_mega65
    generic map (
