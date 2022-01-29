@@ -45,14 +45,6 @@ entity hyperram_mega65 is
          current_cache_line_valid : out std_logic := '0';
          expansionram_current_cache_line_next_toggle : in std_logic := '0';
 
-         -- Allow VIC-IV to request lines of data also.
-         -- We then pump it out byte-by-byte when ready
-         -- VIC-IV can address only 512KB at a time, so we have a banking register
-         viciv_addr : in unsigned(18 downto 3) := (others => '0');
-         viciv_request_toggle : in std_logic := '0';
-         viciv_data_out : out unsigned(7 downto 0) := x"00";
-         viciv_data_strobe : out std_logic := '0';
-
          hr_d : inout unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
          hr_rwds : inout std_logic := 'Z'; -- RW Data strobe
          hr_reset : out std_logic := '1'; -- Active low RESET line to HyperRAM
@@ -253,10 +245,8 @@ architecture gothic of hyperram_mega65 is
 
   type block_t is array (0 to 3) of cache_row_t;
   signal block_data : block_t := (others => (others => x"00"));
-  signal block_address : unsigned(26 downto 5);
   signal is_prefetch : boolean := false;
   signal is_expected_to_respond : boolean := false;
-  signal ram_prefetch : boolean := false;
   signal ram_normalfetch : boolean := false;
 
   signal current_cache_line_new_address : unsigned(26 downto 3) := (others => '0');
@@ -267,8 +257,6 @@ architecture gothic of hyperram_mega65 is
   signal last_current_cache_line_update_all : std_logic := '0';
   signal last_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
 
-  signal current_cache_line_matches_block : std_logic := '0';
-  signal current_cache_line_plus_1_matches_block : std_logic := '0';
   signal hyperram_access_address_matches_cache_row0 : std_logic := '0';
   signal hyperram_access_address_matches_cache_row1 : std_logic := '0';
 
@@ -376,24 +364,11 @@ architecture gothic of hyperram_mega65 is
   signal mark_cache_for_prefetch162 : std_logic := '0';
   signal last_mark_cache_for_prefetch162 : std_logic := '0';
 
-  signal viciv_last_request_toggle : std_logic := '0';
-  signal viciv_bank : unsigned(7 downto 0) := x"00";
-  signal viciv_data_buffer : cache_row_t := (others => x"00");
-  signal viciv_buffer_toggle : std_logic := '0';
-  signal last_viciv_buffer_toggle : std_logic := '0';
-  signal viciv_next_byte : integer range 0 to 8 := 0;
-  signal viciv_request_count : unsigned(31 downto 0) := to_unsigned(0,32);
-  signal is_vic_fetch : boolean := false;
-  signal viciv_data_debug : std_logic := '0';
-  signal viciv_debug_priority : std_logic := '0';
-
   signal read_request_latch : std_logic := '0';
   signal read_request_delatch : std_logic := '0';
   signal read_request_prev : std_logic := '0';
   signal write_request_latch : std_logic := '0';
   signal write_request_prev : std_logic := '0';
-
-  signal prefetch_when_idle : boolean := false;
 
 begin
   process (pixelclock,clock163,clock325) is
@@ -419,29 +394,6 @@ begin
       end if;
       if read_request_delatch = '1' then
         read_request_latch <= '0';
-      end if;
-
-      -- Present the data to the VIC-IV
-      if viciv_data_debug = '1' then
-        viciv_data_strobe <= '1';
-        viciv_data_out <= viciv_request_count(7 downto 0);
-      else
-        viciv_data_strobe <= '0';
-      end if;
-      if viciv_buffer_toggle /= last_viciv_buffer_toggle then
-        report "VIC: Starting to send data";
-        last_viciv_buffer_toggle <= viciv_buffer_toggle;
-        viciv_data_out <= viciv_data_buffer(0);
-        report "VIC: Sending byte " & integer'image(0)
-          & " = $" & to_hstring(viciv_data_buffer(0));
-        viciv_next_byte <= 1;
-        viciv_data_strobe <= '1';
-      elsif viciv_next_byte < 8 then
-        report "VIC: Sending byte " & integer'image(viciv_next_byte)
-          & " = $" & to_hstring(viciv_data_buffer(viciv_next_byte));
-        viciv_data_out <= viciv_data_buffer(viciv_next_byte);
-        viciv_next_byte <= viciv_next_byte + 1;
-        viciv_data_strobe <= '1';
       end if;
 
       if in_simulation = true then
@@ -506,12 +458,6 @@ begin
         write_blocked <= queued_write or queued2_write;
       else
         write_blocked <= '1';
-        busy <= '1';
-      end if;
-
-      -- Similarly as soon as we see a VIC-IV request come through we need to
-      -- assert busy
-      if viciv_request_toggle /= viciv_last_request_toggle then
         busy <= '1';
       end if;
 
@@ -619,10 +565,7 @@ begin
       -- Ignore read requests to the current block read, as they get
       -- short-circuited in the inner state machine to save time.
       report "address = $" & to_hstring(address);
-      if (read_request or read_request_latch)='1' and busy_internal='0'
-        -- Don't but in on the VIC-IV (but once we have submitted a request, we
-        -- do have priority)
-        and (viciv_last_request_toggle = viciv_request_toggle) then
+      if (read_request or read_request_latch)='1' and busy_internal='0' then
         report "Making read request for $" & to_hstring(address);
         -- Begin read request
 
@@ -634,14 +577,6 @@ begin
           ram_reading <= '1';
           ram_address <= address;
           ram_normalfetch <= true;
-          -- We just need to check if there is a pre-fetch already
-          -- queued for this same address
-          if address(26 downto 3) = ram_address(26 downto 3) and ram_prefetch then
-            report "DISPATCH: Merging read with pre-fetch.";
-          else
-            report "DISPATCH: Cancelling pre-fetch to prioritise explicit read";
-            ram_prefetch <= false;
-          end if;
           request_toggle <= not request_toggle;
         end if;
       elsif queued_write='1' and write_collect0_dispatchable='0' and write_collect0_flushed='0'
@@ -867,7 +802,7 @@ begin
         show_collect1 := false;
       end if;
       if show_block or show_always then
-        report "CACHE block0: $" & to_hstring(block_address&"00000")
+        report "CACHE block0: $"
           & ", byte_phase=" & integer'image(to_integer(byte_phase));
         for i in 0 to 3 loop
           report "CACHE block0 segment " & integer'image(i) & ": "
@@ -1040,11 +975,7 @@ begin
       end if;
 
 
-      if address(26 downto 5) = block_address then
-        block_address_matches_address <= '1';
-      else
-        block_address_matches_address <= '0';
-      end if;
+      block_address_matches_address <= '0';
 
       if address(26 downto 5) = hyperram_access_address(26 downto 5) then
         address_matches_hyperram_access_address_block <= '1';
@@ -1092,9 +1023,6 @@ begin
         end if;
       end if;
 
-      current_cache_line_matches_block <= '0';
-      current_cache_line_plus_1_matches_block <= '0';
-
       if cache_row0_address = hyperram_access_address(26 downto 3) then
         hyperram_access_address_matches_cache_row0 <= '1';
       else
@@ -1115,11 +1043,7 @@ begin
       else
         cache_row1_address_matches_cache_row_update_address <= '0';
       end if;
-      if block_address = cache_row_update_address(26 downto 5) then
-        block_address_matches_cache_row_update_address <= '1';
-      else
-        block_address_matches_cache_row_update_address <= '0';
-      end if;
+      block_address_matches_cache_row_update_address <= '0';
 
 
       if enable_current_cache_line='1' then
@@ -1218,49 +1142,6 @@ begin
       -- we end retain cache coherency
       if expansionram_current_cache_line_next_toggle /= last_current_cache_next_toggle then
         last_current_cache_next_toggle <= expansionram_current_cache_line_next_toggle;
-        if current_cache_line_plus_1_matches_block = '1'
-        then
-          report "DISPATCHER: Presenting next 8 bytes to slow_devices. Was $"
-            & to_hstring(current_cache_line_address&"000") & ", new is $"
-            & to_hstring(current_cache_line_address(26 downto 5)&(current_cache_line_address(4 downto 3) + 1)&"000");
-          current_cache_line_address_drive(26 downto 5) <= block_address;
-          current_cache_line_address_drive(4 downto 3) <= "00";
-          current_cache_line_drive <= block_data(0);
-          current_cache_line_valid_drive <= '1';
-          -- Cancel any other updates that might be scheduled for this
-          last_current_cache_line_update_all <= current_cache_line_update_all;
-          last_current_cache_line_update_flags <= current_cache_line_update_flags;
-        end if;
-        if current_cache_line_matches_block = '1'
-        then
-          report "DISPATCHER: Presenting next 8 bytes to slow_devices. Was $"
-            & to_hstring(current_cache_line_address&"000") & ", new is $"
-            & to_hstring(current_cache_line_address(26 downto 5)&(current_cache_line_address(4 downto 3) + 1)&"000")
-            & ", data is:"
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(0))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(1))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(2))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(3))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(4))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(5))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(6))
-            & " " & to_hstring(block_data(to_integer(current_cache_line_address(4 downto 3)) + 1)(7));
-          current_cache_line_address_drive(4 downto 3) <= current_cache_line_address(4 downto 3) + 1;
-          current_cache_line_drive <= block_data(to_integer(current_cache_line_address(4 downto 3)) + 1);
-          current_cache_line_valid_drive <= '1';
-          -- Cancel any other updates that might be scheduled for this
-          last_current_cache_line_update_all <= current_cache_line_update_all;
-          last_current_cache_line_update_flags <= current_cache_line_update_flags;
-
-          -- If it was the last row in the block that we have just presented,
-          -- it would be a really good idea to dispatch a pre-fetch right now.
-          -- The trick is that we can only safely do this, if we are idle.
-          if current_cache_line_address(4 downto 3) = "10" and flag_prefetch='1' then
-            report "DISPATCHER: Queuing chained pre-fetch";
-            prefetch_when_idle <= true;
-          end if;
-
-        end if;
       end if;
 
       -- Keep read request when required
@@ -1354,9 +1235,8 @@ begin
           busy_internal <= '0';
 
           first_transaction <= '0';
-          is_prefetch <= ram_prefetch;
+          is_prefetch <= false;
           is_expected_to_respond <= ram_normalfetch;
-          is_vic_fetch <= false;
 
           -- All commands need the clock offset by 1/2 cycle
           hr_clk_phaseshift <= write_phase_shift;
@@ -1400,100 +1280,7 @@ begin
           -- Phase 101 guarantees that the clock base change will happen
           -- within the comming clock cycle
           if rwr_waiting='0' and  hr_clock_phase165 = "10" then
-            if (viciv_request_toggle /= viciv_last_request_toggle)
-              -- Only start VIC-IV fetches if we don't have a transaction
-              -- already waiting to go.
-              and ((request_toggle = last_request_toggle) or viciv_debug_priority='1')
-            then
-              report "VIC: Received data request for $" & to_hstring(viciv_addr&"000")
-                & ", bank = $" & to_hstring(viciv_bank&"0000000000000000000");
-              -- VIC-IV is asking for 8 bytes of data
-              viciv_last_request_toggle <= viciv_request_toggle;
-
-              viciv_request_count <= viciv_request_count + 1;
-
-              -- Prepare command vector
-              hr_command(47) <= '1'; -- READ
-              hr_command(46) <= '0'; -- Memory, not register space
-              hr_command(45) <= '1'; -- linear
-              hr_command(44 downto 32) <= (others => '0'); -- unused upper address bits
-              hr_command(15 downto 3) <= (others => '0'); -- reserved bits
-              hr_command(34 downto 31) <= viciv_bank(3 downto 0);
-              hr_command(30 downto 16) <= viciv_addr(18 downto 4);
-              hr_command(2) <= viciv_addr(3);
-              hr_command(1 downto 0) <= "00";
-
-              -- We want
-              hyperram0_select <= not viciv_bank(4);
-              hyperram1_select <= viciv_bank(4);
-
-              hyperram_access_address(26 downto 19) <= viciv_bank;
-              hyperram_access_address(18 downto 3) <= viciv_addr(18 downto 3);
-              hyperram_access_address(2 downto 0) <= (others => '0');
-
-              busy_internal <= '1';
-              ram_reading_held <= '1';
-              is_expected_to_respond <= false;
-              is_vic_fetch <= true;
-              countdown <= 6;
-              countdown_is_zero <= '0';
-              config_reg_write <= '0';
-              hr_reset <= '1'; -- active low reset
-              pause_phase <= '0';
-
-              if fast_cmd_mode='1' then
-                state <= HyperRAMOutputCommand;
-                hr_clk_fast <= '1';
-                hr_clk_phaseshift <= write_phase_shift;
-              else
-                state <= HyperRAMOutputCommandSlow;
-                hr_clk_fast <= '0';
-                hr_clk_phaseshift <= write_phase_shift;
-              end if;
-            elsif prefetch_when_idle then
-              prefetch_when_idle <= false;
-              report "DISPATCHER: Dispatching chained pre-fetch";
-              tempaddr(26 downto 5) := current_cache_line_address(26 downto 5) + 1;
-              tempaddr(4 downto 0) := "00000";
-              hyperram_access_address <= tempaddr;
-
-              -- We are reading on a 32 byte boundary, so command formation is
-              -- simpler.
-              hr_command(47) <= '1'; -- Read
-              hr_command(45) <= '1'; -- Linear read, not wrapped
-              hr_command(34 downto 17) <= tempaddr(22 downto 5);
-              hr_command(16 downto 0) <= (others => '0');
-
-              hyperram0_select <= not tempaddr(23);
-              hyperram1_select <= tempaddr(23);
-              hr_reset <= '1';
-              pause_phase <= '0';
-              is_prefetch <= true;
-              ram_reading_held <= '1';
-              is_expected_to_respond <= false;
-
-              if fast_cmd_mode='1' then
-                state <= HyperRAMOutputCommand;
-                hr_clk_fast <= '1';
-                hr_clk_phaseshift <= write_phase_shift;
-              else
-                state <= HyperRAMOutputCommandSlow;
-                hr_clk_fast <= '0';
-                hr_clk_phaseshift <= write_phase_shift;
-              end if;
-
-              countdown <= 6;
-              config_reg_write <= '0';
-              countdown_is_zero <= '0';
-
-              report "DISPATCH: Dispatching pre-fetch of $" & to_hstring(tempaddr)
-                & " in response to giving last row to current_cache_line";
-              -- Mark a cache line to receive the pre-fetched data, so that we don't
-              -- have to wait for it all to turn up, before being able to return
-              -- the first 8 bytes
-              mark_cache_for_prefetch162 <= not mark_cache_for_prefetch162;
-
-            elsif (request_toggle /= last_request_toggle)
+            if (request_toggle /= last_request_toggle)
               -- Only commence reads AFTER all pending writes have flushed,
               -- to ensure cache coherence (there are corner-cases here with
               -- chained writes, block reads and other bits and pieces).
@@ -2679,7 +2466,7 @@ begin
           -- After we have read the first 8 bytes, we know that we are no longer
           -- required to provide any further direct output, so clear the
           -- flag, so that the above logic can terminate a pre-fetch when required.
-          if byte_phase = 8 and (not is_vic_fetch) then
+          if byte_phase = 8 then
             report "DISPATCH: Clearing is_expected_to_respond";
             is_expected_to_respond <= false;
           end if;
@@ -2717,19 +2504,7 @@ begin
             -- Update cache
             if (byte_phase < 8) then
               -- Store the bytes in the cache row
-              if is_vic_fetch then
-                if hyperram0_select='1' then
-                  viciv_data_buffer(to_integer(byte_phase)) <= hr_d;
-                else
-                  viciv_data_buffer(to_integer(byte_phase)) <= hr2_d;
-                end if;
-                -- We load the data here 2x faster than it is sent to the VIC-IV
-                -- so we can start transmitting immediately, to minimise latency
-                if byte_phase = 0 then
-                  report "VIC: Indicating buffer readiness";
-                  viciv_buffer_toggle <= not viciv_buffer_toggle;
-                end if;
-              elsif hyperram_access_address_matches_cache_row0 = '1' then
+              if hyperram_access_address_matches_cache_row0 = '1' then
                 cache_row0_valids(to_integer(byte_phase)) <= '1';
                 report "hr_sample='1'";
                 report "hr_sample='0'";
@@ -2781,8 +2556,7 @@ begin
             end if;
 
             -- Quickly return the correct byte
-            if to_integer(byte_phase) = (to_integer(hyperram_access_address(2 downto 0))+0) and is_expected_to_respond
-              and (not is_vic_fetch) then
+            if to_integer(byte_phase) = (to_integer(hyperram_access_address(2 downto 0))+0) and is_expected_to_respond then
               if hyperram0_select='1' then
                 report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d)
                   & ", hyperram0_select="& std_logic'image(hyperram0_select)
@@ -2906,19 +2680,7 @@ begin
               -- Update cache
               if byte_phase < 8 then
                 -- Store the bytes in the cache row
-                if is_vic_fetch then
-                  if hyperram0_select='1' then
-                    viciv_data_buffer(to_integer(byte_phase)) <= hr_d;
-                  else
-                    viciv_data_buffer(to_integer(byte_phase)) <= hr2_d;
-                  end if;
-                  -- We load the data here 2x faster than it is sent to the VIC-IV
-                  -- so we can start transmitting immediately, to minimise latency
-                  if byte_phase = 0 then
-                    report "VIC: Indicating buffer readiness";
-                    viciv_buffer_toggle <= not viciv_buffer_toggle;
-                  end if;
-                elsif hyperram_access_address_matches_cache_row0 = '1' then
+                if hyperram_access_address_matches_cache_row0 = '1' then
                   cache_row0_valids(to_integer(byte_phase)) <= '1';
                   report "hr_sample='1'";
                   report "hr_sample='0'";
@@ -2970,7 +2732,7 @@ begin
               end if;
 
               -- Quickly return the correct byte
-              if byte_phase = hyperram_access_address_read_time_adjusted and (not is_vic_fetch) then
+              if byte_phase = hyperram_access_address_read_time_adjusted then
                 if hyperram0_select='1' then
                   report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d);
                   rdata <= hr_d;
@@ -2987,7 +2749,7 @@ begin
                   data_ready_strobe_hold <= '1';
                 end if;
               end if;
-              if byte_phase = (hyperram_access_address_read_time_adjusted+1) and (not is_vic_fetch) and (rdata_16en='1') then
+              if byte_phase = (hyperram_access_address_read_time_adjusted+1) and (rdata_16en='1') then
                 if hyperram0_select='1' then
                   report "DISPATCH: Returning freshly read high-byte data = $" & to_hstring(hr_d);
                   rdata_hi <= hr_d;
