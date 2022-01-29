@@ -175,19 +175,6 @@ architecture gothic of hyperram_mega65 is
   signal extra_write_latency2 : unsigned(7 downto 0) := to_unsigned(1,8);
 
 
-  -- Control optimisations for hyperram access
-  -- Enabling the cache MOSTLY works, but there is some cache coherency bug(s)
-  -- when writing. These are currently being investigated.
-  -- Issue #379 triggers one of those edge cases, so leaving disabled by default.
-  -- brave programmers can enable if they dare (its mostly safe for slab DMA
-  -- transfers) PGS20210504 #379
-  signal cache_enabled : boolean := false;
-  -- XXX There is a problem with block reads, where it causes the wrong byte to
-  -- be returned at the start of the cached block. It instead returns the most
-  -- recently WRITTEN byte.  I have no idea why as yet, so for now, we are just
-  -- disabling block reads, at some performance cost.
-  --                                                     PGS 20200923
-  signal block_read_enable : std_logic := '0'; -- disable 32 byte read block fetching
   signal flag_prefetch : std_logic := '1';  -- enable/disable prefetch of read
                                             -- blocks
   signal enable_current_cache_line : std_logic := '1';
@@ -267,8 +254,6 @@ architecture gothic of hyperram_mega65 is
   type block_t is array (0 to 3) of cache_row_t;
   signal block_data : block_t := (others => (others => x"00"));
   signal block_address : unsigned(26 downto 5);
-  signal block_valid : std_logic := '0';
-  signal is_block_read : boolean := false;
   signal is_prefetch : boolean := false;
   signal is_expected_to_respond : boolean := false;
   signal ram_prefetch : boolean := false;
@@ -472,7 +457,6 @@ begin
         & ", busy_internal=" & std_logic'image(busy_internal)
         & ", write_request=" & std_logic'image(write_request)
         & ", request_toggle(last) = " & std_logic'image(request_toggle) & "(" & std_logic'image(last_request_toggle) & ")."
-        & ", is_block_read=" & boolean'image(is_block_read)
         & ", address=$" & to_hstring(address);
 
       -- Pseudo random bits so that we can do randomised cache row replacement
@@ -636,7 +620,6 @@ begin
       -- short-circuited in the inner state machine to save time.
       report "address = $" & to_hstring(address);
       if (read_request or read_request_latch)='1' and busy_internal='0'
-        and ((is_block_read = false) or block_address_matches_address='0')
         -- Don't but in on the VIC-IV (but once we have submitted a request, we
         -- do have priority)
         and (viciv_last_request_toggle = viciv_request_toggle) then
@@ -645,45 +628,7 @@ begin
 
         read_request_latch <= '0';
 
-        -- Check for cache read
-        -- We check the write buffers first, as any contents that they have
-        -- must take priority over everything else
-        if (block_valid='1') and (block_address_matches_address='1') then
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-          fake_rdata <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0)));
-          if rdata_16en='1' then
-            fake_rdata_hi <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))+1);
-          end if;
-          report "DISPATCH: Returning data $"
-            & to_hstring(block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))))
-            & " from read block.";
-          -- Now update current cache line to speed up subsequent reads
-          current_cache_line_update <= block_data(to_integer(address(4 downto 3)));
-          current_cache_line_new_address <= address(26 downto 3);
-          current_cache_line_update_all <= not current_cache_line_update_all;
-
-          if (address(4 downto 3) = "11") and (flag_prefetch='1')
-          and (viciv_request_toggle = viciv_last_request_toggle) then
-            -- When attempting to read from the last 8 bytes of a block read,
-            -- we schedule a pre-fetch of the next 32 bytes, so that we can hide
-            -- the read latency as much as possible.
-            ram_reading <= '1';
-            tempaddr(26 downto 5) := address(26 downto 5) + 1;
-            tempaddr(4 downto 0) := "00000";
-            ram_address <= tempaddr;
-            request_toggle <= not request_toggle;
-            ram_prefetch <= true;
-            ram_normalfetch <= false;
-
-            report "DISPATCH: Dispatching pre-fetch of $" & to_hstring(tempaddr);
-            -- Mark a cache line to receive the pre-fetched data, so that we don't
-            -- have to wait for it all to turn up, before being able to return
-            -- the first 8 bytes
-            mark_cache_for_prefetch <= not mark_cache_for_prefetch;
-          end if;
-
-        elsif request_accepted = request_toggle then
+        if request_accepted = request_toggle then
           -- Normal RAM read.
           report "request_toggle flipped";
           ram_reading <= '1';
@@ -735,7 +680,6 @@ begin
         else
           -- Always do cached writes, as apart from the latency before
           -- they get written out, it seems to be pretty reliable
-          -- if cache_enabled = false then
           if false then
             -- Do normal  write request
             report "request_toggle flipped";
@@ -923,7 +867,7 @@ begin
         show_collect1 := false;
       end if;
       if show_block or show_always then
-        report "CACHE block0: $" & to_hstring(block_address&"00000") & ", valid=" & std_logic'image(block_valid)
+        report "CACHE block0: $" & to_hstring(block_address&"00000")
           & ", byte_phase=" & integer'image(to_integer(byte_phase));
         for i in 0 to 3 loop
           report "CACHE block0 segment " & integer'image(i) & ": "
@@ -1148,18 +1092,8 @@ begin
         end if;
       end if;
 
-      if current_cache_line_address(26 downto 5) = block_address(26 downto 5)
-          and (current_cache_line_address(4 downto 3) /= "11") and (block_valid='1') then
-        current_cache_line_matches_block <= '1';
-      else
-        current_cache_line_matches_block <= '0';
-      end if;
-      if (current_cache_line_address(26 downto 5) + 1) = block_address(26 downto 5)
-        and (current_cache_line_address(4 downto 3) = "11") and (block_valid='1') then
-          current_cache_line_plus_1_matches_block <= '1';
-      else
-        current_cache_line_plus_1_matches_block <= '0';
-      end if;
+      current_cache_line_matches_block <= '0';
+      current_cache_line_plus_1_matches_block <= '0';
 
       if cache_row0_address = hyperram_access_address(26 downto 3) then
         hyperram_access_address_matches_cache_row0 <= '1';
@@ -1253,7 +1187,6 @@ begin
       cache_row0_valids <= (others => '0');
       cache_row1_valids <= (others => '0');
       current_cache_line_valid_drive <= '0';
-      block_valid <= '0';
 
       if current_cache_line_update_all = last_current_cache_line_update_all then
         if current_cache_line_update_address = current_cache_line_address_drive then
@@ -1397,7 +1330,6 @@ begin
         report "CACHE: Invalidating read cache due to write congestion.";
         cache_row0_valids <= (others => '0');
         cache_row1_valids <= (others => '0');
-        block_valid <= '0';
         current_cache_line_valid_drive <= '0';
         last_cache_row_update_toggle <= cache_row_update_toggle;
       end if;
@@ -1422,7 +1354,6 @@ begin
           busy_internal <= '0';
 
           first_transaction <= '0';
-          is_block_read <= false;
           is_prefetch <= ram_prefetch;
           is_expected_to_respond <= ram_normalfetch;
           is_vic_fetch <= false;
@@ -1842,15 +1773,6 @@ begin
           hr_rwds <= 'Z';
           hr2_rwds <= 'Z';
 
-          -- Prepare for reading block data
-          is_block_read <= false;
-          if (hyperram_access_address(4 downto 3) = "00") and block_read_enable='1' and (ram_reading_held='1')
-            and (is_vic_fetch = false) then
-            block_valid <= '0';
-            block_address <= hyperram_access_address(26 downto 5);
-            is_block_read <= true;
-          end if;
-
           pause_phase <= not pause_phase;
 
           if pause_phase='1' then
@@ -2001,15 +1923,6 @@ begin
           hr2_rwds <= 'Z';
 
           hr_clk_phaseshift <= write_byte_phase;
-
-          -- Prepare for reading block data
-          is_block_read <= false;
-          if (hyperram_access_address(4 downto 3) = "00") and block_read_enable='1' and (ram_reading_held='1')
-            and (is_vic_fetch = false) then
-            block_valid <= '0';
-            block_address <= hyperram_access_address(26 downto 5);
-            is_block_read <= true;
-          end if;
 
           pause_phase <= not pause_phase;
 
@@ -2763,86 +2676,6 @@ begin
             state <= Idle;
           end if;
 
-          -- Abort memory pre-fetching if we are asked to do something
-          if is_block_read and (not is_vic_fetch) then
-            if (read_request_prev='1' or write_request_prev='1') then
-              -- Okay, here is the tricky case: If the request is for data
-              -- that is in this block read, we DONT want to abort the read,
-              -- because starting a new request will almost always be slower.
-              report "DISPATCH: new request is for $" & to_hstring(address) & ", and we are reading $" & to_hstring(hyperram_access_address) & ", read = " & std_logic'image(read_request);
-              report "DISPATCH:"
-                & " read_request=" & std_logic'image(read_request)
-                & " read_request_held=" & std_logic'image(read_request_held)
-                & " address_matches_hyperram_access_address_block=" & std_logic'image(address_matches_hyperram_access_address_block);
-
-              if write_request_prev='1' and address_matches_hyperram_access_address_block='1' then
-                -- XXX We are writing to a block that we are pre-fetching.
-                -- The write will happen anyway.  If we already have read the
-                -- byte, we can update it, else we have to abort the block, so
-                -- that the write can happen first.
-                if byte_phase_greater_than_address_low_bits = '0' then
-                  report "DISPATCH: Aborting pre-fetch due to incoming conflicting write request";
-                  state <= ReadAbort;
-                end if;
-
-              elsif read_request_prev='1' and address_matches_hyperram_access_address_block='1' then
-                -- New read request from later in this block.
-                -- We know that we will have the data soon.
-                -- The trick is coordinating our response.
-                -- If we have already read the byte, then it's relatively easy:
-                -- we can just return it, and pretend nothing happened...
-                -- except that the 80mhz state machine that talks to slow_devices
-                -- doesn't know that we can do this.
-                report "DISPATCH: Continuing with pre-fetch, because the read hits the block being read!";
-
-                -- Return the byte as soon as we have it available
-                -- We don't test request_toggle, as the outer 80MHz state
-                -- machine thinks we are still busy.
-                if address_matches_hyperram_access_address_block = '1' then
-                  if byte_phase_greater_than_address_low_bits='1' then
-                    report "DISPATCH: Supplying data from partially read data block. Value is $"
-                      & to_hstring(block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))))
-                      & " ( from (" & integer'image(to_integer(address(4 downto 3)))
-                      & ")(" & integer'image(to_integer(address(2 downto 0)));
-                    report "asserting data_ready_strobe";
-                    read_request_delatch <= '1';
-                    data_ready_strobe <= '1';
-                    data_ready_strobe_hold <= '1';
-                    rdata <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0)));
-                    if rdata_16en='1' then
-                      rdata_hi <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))+1);
-                    end if;
-                    last_request_toggle <= request_toggle;
-
-                    -- Also push the whole cache line equivalent to
-                    -- slow_devices to help it optimise linear reads
-                    report "DISPATCH: byte_phase = " & integer'image(to_integer(byte_phase))
-                      & ", address=$" & to_hstring(address);
-                    if byte_phase_greater_than_address_end_of_row = '1' then
-                      report "DISPATCH: Pushing block line to current_cache_line";
-                      current_cache_line_drive <= block_data(to_integer(address(4 downto 3)));
-                      current_cache_line_address_drive(26 downto 5) <= block_address(26 downto 5);
-                      current_cache_line_address_drive(4 downto 3) <= address(4 downto 3);
-                      current_cache_line_valid_drive <= '1';
-                    else
-                      report "DISPATCH: " & integer'image(to_integer(byte_phase)) & " not > " &
-                        integer'image(to_integer(address(4 downto 3)&"111"));
-                    end if;
-                  end if;
-                end if;
-
-              elsif read_request_prev='1' and (not is_expected_to_respond) and (not is_vic_fetch) then
-                report "DISPATCH: Aborting pre-fetch due to incoming read request";
-                state <= ReadAbort;
-              end if;
-            end if;
-            -- Because we can now abort at any time, we can pretend we are
-            -- not busy. We are just filling in time...
-            if busy_internal = '1' then
-              report "DISPATCH: Clearing busy during tail of pre-fetch";
-            end if;
-            busy_internal <= '0';
-          end if;
           -- After we have read the first 8 bytes, we know that we are no longer
           -- required to provide any further direct output, so clear the
           -- flag, so that the above logic can terminate a pre-fetch when required.
@@ -2882,18 +2715,6 @@ begin
                   report "DISPATCH Saw read data = $" & to_hstring(hr_d);
 
             -- Update cache
-            if (byte_phase < 32) and is_block_read and (not is_vic_fetch) then
-              report "hr_sample='1'";
-              report "hr_sample='0'";
-              if hyperram0_select='1' then
-                block_data(to_integer(byte_phase(4 downto 3)))(to_integer(byte_phase(2 downto 0)))
-                  <= hr_d;
-              else
-                block_data(to_integer(byte_phase(4 downto 3)))(to_integer(byte_phase(2 downto 0)))
-                  <= hr2_d;
-              end if;
-              show_block := true;
-            end if;
             if (byte_phase < 8) then
               -- Store the bytes in the cache row
               if is_vic_fetch then
@@ -2990,7 +2811,7 @@ begin
               end if;
             end if;
             report "byte_phase = " & integer'image(to_integer(byte_phase));
-            if ((byte_phase = 7) and (is_block_read=false))
+            if (byte_phase = 7)
               or (byte_phase = 31) then
               rwr_counter <= rwr_delay;
               rwr_waiting <= '1';
@@ -3000,9 +2821,6 @@ begin
               hr_cs0 <= '1';
               hr_cs1 <= '1';
               hr_clk_phaseshift <= write_phase_shift;
-              if is_block_read then
-                block_valid <= '1';
-              end if;
               is_prefetch <= false;
               is_expected_to_respond <= false;
             else
@@ -3024,24 +2842,6 @@ begin
 
           pause_phase <= not pause_phase;
 
-          -- Abort memory pre-fetching if we are asked to do something
-          -- XXX unless it is for data that would be pre-fetched?
-          if is_block_read and (not is_expected_to_respond) and (not is_vic_fetch)  then
-            if ( write_request='1')
-              -- If a new read is on the same cache line as the last, then
-              -- assume whatever read we are doing now will satisfy it
---              or (read_request='1' and address(26 downto 3) /= ram_address(26 downto 3))
-              or (read_request='1')
-            then
-              report "DISPATCH: Aborting pre-fetch due to incoming request";
-              state <= ReadAbort;
-            end if;
-            -- Because we can now abort at any time, we can pretend we are
-            -- not busy. We are just filling in time...
-            if busy_internal = '1' then
-              report "DISPATCH: Clearing busy during tail of pre-fetch";
-            end if;
-          end if;
           -- After we have read the first 8 bytes, we know that we are no longer
           -- required to provide any further direct output, so clear the
           -- flag, so that the above logic can terminate a pre-fetch when required.
@@ -3104,18 +2904,6 @@ begin
 --                  report "DISPATCH Saw read data = $" & to_hstring(hr_d);
 
               -- Update cache
-              if (byte_phase < 32) and is_block_read and (not is_vic_fetch) then
-                report "hr_sample='1'";
-                report "hr_sample='0'";
-                if hyperram0_select='1' then
-                  block_data(to_integer(byte_phase(4 downto 3)))(to_integer(byte_phase(2 downto 0)))
-                    <= hr_d;
-                else
-                  block_data(to_integer(byte_phase(4 downto 3)))(to_integer(byte_phase(2 downto 0)))
-                    <= hr2_d;
-                end if;
-                show_block := true;
-              end if;
               if byte_phase < 8 then
                 -- Store the bytes in the cache row
                 if is_vic_fetch then
@@ -3217,8 +3005,7 @@ begin
 
               end if;
               report "byte_phase = " & integer'image(to_integer(byte_phase));
-              if (byte_phase = seven_plus_read_time_adjust and is_block_read=false)
-                or (byte_phase = thirtyone_plus_read_time_adjust and is_block_read=true)
+              if (byte_phase = seven_plus_read_time_adjust)
               then
                 rwr_counter <= rwr_delay;
                 rwr_waiting <= '1';
