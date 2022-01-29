@@ -171,16 +171,6 @@ architecture gothic of hyperram_mega65 is
                                             -- blocks
   signal enable_current_cache_line : std_logic := '1';
 
-  -- These three must be off for reliable operation on current PCBs
-  signal fast_cmd_mode : std_logic := '0';
-  signal fast_read_mode : std_logic := '0';
-  signal fast_write_mode : std_logic := '0';
-
-  -- As we move to enabling 80MHz operation, we are selectively applying
-  -- fast_cmd mode.  It seems to work fine for reads, but not for writes
-  -- at the moment.
-  signal fast_cmd_for_write_enabled : boolean := true;
-
   signal read_phase_shift : std_logic := '0';
   signal write_phase_shift : std_logic := '1';
 
@@ -243,9 +233,6 @@ architecture gothic of hyperram_mega65 is
   signal write_collect1_flushed : std_logic := '1';
 
 
-  type block_t is array (0 to 3) of cache_row_t;
-  signal block_data : block_t := (others => (others => x"00"));
-  signal is_prefetch : boolean := false;
   signal is_expected_to_respond : boolean := false;
   signal ram_normalfetch : boolean := false;
 
@@ -260,8 +247,6 @@ architecture gothic of hyperram_mega65 is
   signal hyperram_access_address_matches_cache_row0 : std_logic := '0';
   signal hyperram_access_address_matches_cache_row1 : std_logic := '0';
 
-  signal cache_row_update_toggle : std_logic := '0';
-  signal last_cache_row_update_toggle : std_logic := '0';
   signal cache_row_update_address : unsigned(26 downto 3) := (others => '0');
   signal cache_row_update_byte : integer range 0 to 7 := 0;
   signal cache_row_update_value : unsigned(7 downto 0) := x"00";
@@ -298,13 +283,10 @@ architecture gothic of hyperram_mega65 is
   signal collect0_matches_collect1_plus_1 : std_logic := '0';
   signal matches_cache_row_update_address : std_logic := '0';
   signal cache_row_update_address_changed : std_logic := '0';
-  signal block_address_matches_cache_row_update_address : std_logic := '0';
   signal cache_row0_address_matches_cache_row_update_address : std_logic := '0';
   signal cache_row1_address_matches_cache_row_update_address : std_logic := '0';
   signal byte_phase_greater_than_address_low_bits : std_logic := '0';
   signal byte_phase_greater_than_address_end_of_row : std_logic := '0';
-  signal block_address_matches_address : std_logic := '0';
-  signal invalidate_read_cache : std_logic := '0';
 
   signal write_continues : integer range 0 to 255 := 0;
   signal write_continues_max : integer range 0 to 255 := 16;
@@ -359,10 +341,6 @@ architecture gothic of hyperram_mega65 is
 
   signal read_request_held : std_logic := '0';
   signal write_request_held : std_logic := '0';
-  signal mark_cache_for_prefetch : std_logic := '0';
-  signal last_mark_cache_for_prefetch : std_logic := '0';
-  signal mark_cache_for_prefetch162 : std_logic := '0';
-  signal last_mark_cache_for_prefetch162 : std_logic := '0';
 
   signal read_request_latch : std_logic := '0';
   signal read_request_delatch : std_logic := '0';
@@ -373,17 +351,14 @@ architecture gothic of hyperram_mega65 is
 begin
   process (pixelclock,clock163,clock325) is
     variable clock_status_vector : unsigned(4 downto 0);
-    variable tempaddr : unsigned(26 downto 0);
     variable show_cache0 : boolean := false;
     variable show_cache1 : boolean := false;
     variable show_collect0 : boolean := false;
     variable show_collect1 : boolean := false;
-    variable show_block : boolean := false;
-    variable show_always : boolean := true;
+    variable show_always : boolean := false;
   begin
     if rising_edge(pixelclock) then
 
-      invalidate_read_cache <= '0';
       cache_row_update_address_changed <= '0';
 
       if read_request='1' then
@@ -713,15 +688,6 @@ begin
             cache_row_update_value_hi <= wdata_hi;
             cache_row_update_lo <= wen_lo;
             cache_row_update_hi <= wen_hi;
-            if cache_row_update_toggle = not last_cache_row_update_toggle then
-              -- At least one other cache update is pending.  This means that
-              -- we will not be able to keep the cache consistent.  The only
-              -- option is to invalidate the read cache rows, data block,
-              -- and current_cache_line.
-              invalidate_read_cache <= '1';
-            else
-              cache_row_update_toggle <= not last_cache_row_update_toggle;
-            end if;
 
           end if;
         end if;
@@ -801,21 +767,9 @@ begin
           & to_hstring(write_collect1_data(7)) & " ";
         show_collect1 := false;
       end if;
-      if show_block or show_always then
+      if show_always then
         report "CACHE block0: $"
           & ", byte_phase=" & integer'image(to_integer(byte_phase));
-        for i in 0 to 3 loop
-          report "CACHE block0 segment " & integer'image(i) & ": "
-            & to_hstring(block_data(i)(0)) & " "
-            & to_hstring(block_data(i)(1)) & " "
-            & to_hstring(block_data(i)(2)) & " "
-            & to_hstring(block_data(i)(3)) & " "
-            & to_hstring(block_data(i)(4)) & " "
-            & to_hstring(block_data(i)(5)) & " "
-            & to_hstring(block_data(i)(6)) & " "
-            & to_hstring(block_data(i)(7)) & " ";
-        end loop;
-        show_block := false;
       end if;
 
 
@@ -975,8 +929,6 @@ begin
       end if;
 
 
-      block_address_matches_address <= '0';
-
       if address(26 downto 5) = hyperram_access_address(26 downto 5) then
         address_matches_hyperram_access_address_block <= '1';
       else
@@ -1043,7 +995,6 @@ begin
       else
         cache_row1_address_matches_cache_row_update_address <= '0';
       end if;
-      block_address_matches_cache_row_update_address <= '0';
 
 
       if enable_current_cache_line='1' then
@@ -1054,25 +1005,6 @@ begin
         current_cache_line <= current_cache_line_drive;
         current_cache_line_address <= current_cache_line_address_drive;
         current_cache_line_valid <= current_cache_line_valid_drive;
-      end if;
-
-      if mark_cache_for_prefetch /= last_mark_cache_for_prefetch
-        or mark_cache_for_prefetch162 /= last_mark_cache_for_prefetch162 then
-        last_mark_cache_for_prefetch <= mark_cache_for_prefetch;
-        last_mark_cache_for_prefetch162 <= mark_cache_for_prefetch162;
-        if random_bits(1)='0' then
-          report "Zeroing cache_row0_valids";
-          cache_row0_valids <= (others => '0');
-          cache_row0_address <= ram_address(26 downto 3);
-          cache_row0_address_matches_ram_address <= '1';
-          show_cache0 := true;
-        else
-          report "Zeroing cache_row1_valids";
-          cache_row1_valids <= (others => '0');
-          cache_row1_address <= ram_address(26 downto 3);
-          cache_row1_address_matches_ram_address <= '1';
-          show_cache1 := true;
-        end if;
       end if;
 
       if data_ready_strobe_hold = '0' then
@@ -1156,65 +1088,6 @@ begin
         end if;
       end if;
 
---      report "CACHE: row update status: requested = " & boolean'image(cache_row_update_toggle /= last_cache_row_update_toggle)
---        & ", cache_row_update_address_changed = " & std_logic'image(cache_row_update_address_changed);
-
-      if cache_row_update_toggle /= last_cache_row_update_toggle and cache_row_update_address_changed = '0' then
-        if cache_row0_address_matches_cache_row_update_address = '1' then
-          if cache_row_update_lo='1' then
-            report "DISPATCH: Updating cache0 via write: $" & to_hstring((cache_row_update_address&"000")+cache_row_update_byte)
-              & " gets $" & to_hstring(cache_row_update_value);
-            cache_row0_valids(cache_row_update_byte) <= '1';
-            cache_row0_data(cache_row_update_byte) <= cache_row_update_value;
-          end if;
-          if cache_row_update_hi='1' then
-            report "DISPATCH: Updating cache0 via write: $" & to_hstring((cache_row_update_address&"001")+cache_row_update_byte)
-              & " gets $" & to_hstring(cache_row_update_value_hi);
-            cache_row0_valids(cache_row_update_byte+1) <= '1';
-            cache_row0_data(cache_row_update_byte+1) <= cache_row_update_value_hi;
-          end if;
-          show_cache0 := true;
-        end if;
-        if cache_row1_address_matches_cache_row_update_address = '1' then
-          if cache_row_update_lo='1' then
-            report "DISPATCH: Updating cache1 via write: $" & to_hstring((cache_row_update_address&"000")+cache_row_update_byte)
-              & " gets $" & to_hstring(cache_row_update_value);
-            cache_row1_valids(cache_row_update_byte) <= '1';
-            cache_row1_data(cache_row_update_byte) <= cache_row_update_value;
-          end if;
-          if cache_row_update_hi='1' then
-            report "DISPATCH: Updating cache1 via write: $" & to_hstring((cache_row_update_address&"001")+cache_row_update_byte)
-              & " gets $" & to_hstring(cache_row_update_value);
-            cache_row1_valids(cache_row_update_byte+1) <= '1';
-            cache_row1_data(cache_row_update_byte+1) <= cache_row_update_value_hi;
-          end if;
-          show_cache1 := true;
-        end if;
-        if block_address_matches_cache_row_update_address = '1' then
-          if cache_row_update_lo='1' then
-            report "DISPATCH: Updating block data via write: $" & to_hstring((cache_row_update_address&"000")+cache_row_update_byte)
-              & " gets $" & to_hstring(cache_row_update_value);
-            block_data(to_integer(cache_row_update_address(4 downto 3)))(cache_row_update_byte)
-              <= cache_row_update_value;
-          end if;
-          if cache_row_update_hi='1' then
-            report "DISPATCH: Updating block data via write: $" & to_hstring((cache_row_update_address&"001")+cache_row_update_byte)
-              & " gets $" & to_hstring(cache_row_update_value_hi);
-            block_data(to_integer(cache_row_update_address(4 downto 3)))(cache_row_update_byte+1)
-              <= cache_row_update_value_hi;
-          end if;
-          show_block := true;
-        end if;
-      end if;
-
-      if invalidate_read_cache='1' then
-        report "CACHE: Invalidating read cache due to write congestion.";
-        cache_row0_valids <= (others => '0');
-        cache_row1_valids <= (others => '0');
-        current_cache_line_valid_drive <= '0';
-        last_cache_row_update_toggle <= cache_row_update_toggle;
-      end if;
-
       case state is
         when StartupDelay =>
           null;
@@ -1235,7 +1108,6 @@ begin
           busy_internal <= '0';
 
           first_transaction <= '0';
-          is_prefetch <= false;
           is_expected_to_respond <= ram_normalfetch;
 
           -- All commands need the clock offset by 1/2 cycle
@@ -1317,7 +1189,6 @@ begin
               -- Do background write.
               busy_internal <= '0';
               request_accepted <= request_toggle;
-              is_prefetch <= false;
               is_expected_to_respond <= false;
 
               report "DISPATCH: Writing out collect0 @ $" & to_hstring(write_collect0_address&"000");
@@ -1374,7 +1245,6 @@ begin
               busy_internal <= '0';
               request_accepted <= request_toggle;
 
-              is_prefetch <= false;
               is_expected_to_respond <= false;
 
               report "DISPATCH: Writing out collect1 @ $" & to_hstring(write_collect1_address&"000");
@@ -1441,15 +1311,9 @@ begin
         when StartBackgroundWrite =>
           report "in StartBackgroundWrite to synchronise with clock";
           pause_phase <= '0';
-          if fast_cmd_mode='1' and fast_cmd_for_write_enabled then
-            state <= HyperRAMOutputCommand;
-            hr_clk_phaseshift <= write_phase_shift;
-            hr_clk_fast <= '1';
-          else
-            state <= HyperRAMOutputCommandSlow;
-            hr_clk_phaseshift <= write_phase_shift;
-            hr_clk_fast <= '0';
-          end if;
+          state <= HyperRAMOutputCommandSlow;
+          hr_clk_phaseshift <= write_phase_shift;
+          hr_clk_fast <= '0';
 
         when ReadSetup =>
           report "Setting up to read $" & to_hstring(ram_address) & " ( address = $" & to_hstring(address) & ")";
@@ -1485,15 +1349,9 @@ begin
           hr_reset <= '1'; -- active low reset
           pause_phase <= '0';
 
-          if fast_cmd_mode='1' then
-            state <= HyperRAMOutputCommand;
-            hr_clk_fast <= '1';
-            hr_clk_phaseshift <= write_phase_shift;
-          else
-            state <= HyperRAMOutputCommandSlow;
-            hr_clk_fast <= '0';
-            hr_clk_phaseshift <= write_phase_shift;
-          end if;
+          state <= HyperRAMOutputCommandSlow;
+          hr_clk_fast <= '0';
+          hr_clk_phaseshift <= write_phase_shift;
 
           countdown <= 6;
           config_reg_write <= '0';
@@ -1531,15 +1389,9 @@ begin
           pause_phase <= '0';
 
           if start_delay_expired = '1' then
-            if fast_cmd_mode='1' and fast_cmd_for_write_enabled then
-              state <= HyperRAMOutputCommand;
-              hr_clk_fast <= '1';
-              hr_clk_phaseshift <= write_phase_shift;
-            else
-              state <= HyperRAMOutputCommandSlow;
-              hr_clk_fast <= '0';
-              hr_clk_phaseshift <= write_phase_shift;
-            end if;
+            state <= HyperRAMOutputCommandSlow;
+            hr_clk_fast <= '0';
+            hr_clk_phaseshift <= write_phase_shift;
           end if;
           if ram_address(25)='1' then
             -- 48 bits of CA followed by 16 bit register value
@@ -1574,14 +1426,9 @@ begin
                 countdown_is_zero <= '0';
                 hr_rwds_high_seen <= '0';
                 countdown_timeout <= '0';
-                if fast_read_mode='1' then
-                  hr_clk_fast <= '1';
-                  state <= HyperRAMReadWait;
-                else
-                  pause_phase <= '1';
-                  hr_clk_fast <= '0';
-                  state <= HyperRAMReadWaitSlow;
-                end if;
+                pause_phase <= '1';
+                hr_clk_fast <= '0';
+                state <= HyperRAMReadWaitSlow;
               elsif config_reg_write='1' and ram_reading_held='0' then
                 -- Config register write.
                 -- These are a bit weird, as they have no latency, and all 16
@@ -1637,13 +1484,8 @@ begin
                   end if;
                 end if;
                 countdown_timeout <= '0';
-                if fast_write_mode='1' then
-                  hr_clk_fast <= '1';
-                  state <= HyperRAMDoWrite;
-                else
-                  hr_clk_fast <= '0';
-                  state <= HyperRAMDoWriteSlow;
-                end if;
+                hr_clk_fast <= '0';
+                state <= HyperRAMDoWriteSlow;
               end if;
             end if;
 
@@ -1724,14 +1566,9 @@ begin
               countdown_is_zero <= '0';
               hr_rwds_high_seen <= '0';
               countdown_timeout <= '0';
-              if fast_read_mode='1' then
-                hr_clk_fast <= '1';
-                state <= HyperRAMReadWait;
-              else
-                pause_phase <= '1';
-                hr_clk_fast <= '0';
-                state <= HyperRAMReadWaitSlow;
-              end if;
+              pause_phase <= '1';
+              hr_clk_fast <= '0';
+              state <= HyperRAMReadWaitSlow;
             elsif config_reg_write='1' and ram_reading_held='0' then
               -- Config register write.
               -- These are a bit weird, as they have no latency, and all 16
@@ -1787,13 +1624,8 @@ begin
                 end if;
               end if;
               countdown_timeout <= '0';
-              if fast_write_mode='1' then
-                hr_clk_fast <= '1';
-                state <= HyperRAMDoWrite;
-              else
-                hr_clk_fast <= '0';
-                state <= HyperRAMDoWriteSlow;
-              end if;
+              hr_clk_fast <= '0';
+              state <= HyperRAMDoWriteSlow;
             end if;
           end if;
 
@@ -2595,7 +2427,6 @@ begin
               hr_cs0 <= '1';
               hr_cs1 <= '1';
               hr_clk_phaseshift <= write_phase_shift;
-              is_prefetch <= false;
               is_expected_to_respond <= false;
             else
               byte_phase <= byte_phase + 1;
