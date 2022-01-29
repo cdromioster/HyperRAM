@@ -72,13 +72,11 @@ architecture gothic of hyperram_mega65 is
     ReadSetup,
     WriteSetup,
     HyperRAMOutputCommand,
-    HyperRAMDoWrite,
     HyperRAMOutputCommandSlow,
     StartBackgroundWrite,
     HyperRAMDoWriteSlow,
     HyperRAMFinishWriting,
-    HyperRAMReadWaitSlow,
-    HyperRAMReadWait
+    HyperRAMReadWaitSlow
     );
 
   -- How many clock ticks need to expire between transactions to satisfy T_RWR
@@ -169,7 +167,6 @@ architecture gothic of hyperram_mega65 is
 
   signal flag_prefetch : std_logic := '1';  -- enable/disable prefetch of read
                                             -- blocks
-  signal enable_current_cache_line : std_logic := '1';
 
   signal read_phase_shift : std_logic := '0';
   signal write_phase_shift : std_logic := '1';
@@ -182,8 +179,6 @@ architecture gothic of hyperram_mega65 is
   signal pause_phase : std_logic := '0';
   signal hr_clock : std_logic := '0';
 
-  signal data_ready_toggle : std_logic := '0';
-  signal last_data_ready_toggle : std_logic := '0';
   signal data_ready_strobe_hold : std_logic := '0';
 
   signal request_toggle : std_logic := '0';
@@ -421,11 +416,6 @@ begin
               or read_request or write_request or read_request_latch or write_request_latch
               or (not start_delay_expired);
 
-      if write_blocked = '1' and first_transaction='0' then
---        report "DISPATCH: write_blocked asserted. Waiting for existing writes to flush...";
-        null;
-      end if;
-
       -- Clear write block as soon as either write buffer clears
       if (write_collect0_dispatchable='0' and write_collect0_toolate='0' and write_collect0_flushed='0')
         or (write_collect1_dispatchable='0' and write_collect1_toolate='0' and write_collect1_flushed='0')
@@ -461,9 +451,7 @@ begin
         write_collect0_dispatchable <= '0';
       end if;
       if write_collect1_dispatchable = '1' and write_collect1_toolate = '1' and write_collect1_flushed = '1' then
-        if write_collect1_dispatchable='1' then
-          show_collect1 := true;
-        end if;
+        show_collect1 := true;
         report "WRITE: Clearing collect1";
         write_collect1_address <= (others => '1');
         write_collect1_dispatchable <= '0';
@@ -511,8 +499,8 @@ begin
 
           queued2_write <= '0';
         end if;
-
       end if;
+
       if write_collect1_dispatchable = '0' and write_collect1_toolate = '0' and write_collect1_flushed = '0' then
         if queued_write='1' then
           report "DISPATCH: Dequeuing queued write to $" & to_hstring(queued_waddr);
@@ -599,8 +587,7 @@ begin
 
             -- Can we add the write to an existing collected write?
             if write_collect0_toolate = '0' and write_collect0_address = address(26 downto 3)
-              and write_collect0_dispatchable = '1' and write_collect0_toolate='0'
-            then
+              and write_collect0_dispatchable = '1' then
               if wen_lo='1' then
                 write_collect0_valids(to_integer(address(2 downto 0))) <= '1';
                 write_collect0_data(to_integer(address(2 downto 0))) <= wdata;
@@ -611,7 +598,7 @@ begin
               end if;
               show_collect0 := true;
             elsif write_collect1_toolate = '0' and write_collect1_address = address(26 downto 3)
-              and write_collect1_dispatchable = '1' and write_collect1_toolate='0' then
+              and write_collect1_dispatchable = '1' then
               if wen_lo='1' then
                 write_collect1_valids(to_integer(address(2 downto 0))) <= '1';
                 write_collect1_data(to_integer(address(2 downto 0))) <= wdata;
@@ -676,7 +663,6 @@ begin
                 queued_wen_hi <= wen_hi;
                 queued_write <= '1';
               end if;
-
             end if;
 
             -- Update read cache structures when writing
@@ -688,19 +674,11 @@ begin
             cache_row_update_value_hi <= wdata_hi;
             cache_row_update_lo <= wen_lo;
             cache_row_update_hi <= wen_hi;
-
           end if;
         end if;
-      else
-        -- Nothing new to do
-        if data_ready_toggle /= last_data_ready_toggle then
-          last_data_ready_toggle <= data_ready_toggle;
-          report "asserting fake_data_ready_strobe";
-          fake_data_ready_strobe <= '1';
-        end if;
       end if;
-
     end if;
+
     -- Optionally delay HR_CLK by 1/2 an 160MHz clock cycle
     -- (actually just by optionally inverting it)
     if rising_edge(clock325) then
@@ -867,7 +845,6 @@ begin
         when others => hr_clk <= '0';  hr_clk_p <= '0'; hr_clk_n <= '1';
                        hr2_clk_p <= '0'; hr2_clk_n <= '1';
       end case;
-
     end if;
 
     if rising_edge(clock163) then
@@ -997,15 +974,9 @@ begin
       end if;
 
 
-      if enable_current_cache_line='1' then
---        if current_cache_line /= current_cache_line_drive then
---          report "CACHE: Updating current_cache_line from drive. Now "
---            & to_hstring(current_cache_line_drive(0)) & " ...";
---        end if;
-        current_cache_line <= current_cache_line_drive;
-        current_cache_line_address <= current_cache_line_address_drive;
-        current_cache_line_valid <= current_cache_line_valid_drive;
-      end if;
+      current_cache_line <= current_cache_line_drive;
+      current_cache_line_address <= current_cache_line_address_drive;
+      current_cache_line_valid <= current_cache_line_valid_drive;
 
       if data_ready_strobe_hold = '0' then
         if fake_data_ready_strobe='1' then
@@ -1063,17 +1034,6 @@ begin
         current_cache_line_address_drive <= current_cache_line_new_address;
         current_cache_line_drive <= current_cache_line_update;
         last_current_cache_line_update_flags <= current_cache_line_update_flags;
-      end if;
-
-      -- See if slow_devices is asking for the next 8 bytes.
-      -- If we have it, then pre-present it if we have it in our data block
-      -- (If it isn't in the data block, then we will have presumably already
-      -- started a pre-fetch when we serviced the access that created the current
-      -- data value in the current cache line entry.
-      -- This has to happen below the above single-byte update stuff, so that
-      -- we end retain cache coherency
-      if expansionram_current_cache_line_next_toggle /= last_current_cache_next_toggle then
-        last_current_cache_next_toggle <= expansionram_current_cache_line_next_toggle;
       end if;
 
       -- Keep read request when required
@@ -1176,7 +1136,6 @@ begin
                 state <= WriteSetup;
                 report "Accepting job";
                 busy_internal <= '1';
-
               end if;
             elsif (write_collect0_dispatchable = '1')
               -- But only if the other collector doesn't have an address that
@@ -1542,6 +1501,7 @@ begin
           end if;
           byte_phase <= to_unsigned(0,6);
           write_byte_phase <= '0';
+
         when HyperRAMOutputCommand =>
           report "Writing command";
           -- Call HyperRAM to attention
@@ -1682,289 +1642,6 @@ begin
           write_byte_phase <= '0';
 
 
-        when HyperRAMDoWrite =>
-
-          -- Update cache
-          if cache_row0_address_matches_ram_address = '1' then
-            if ram_wdata_enlo_drive='1' then
-              cache_row0_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-              cache_row0_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-            end if;
-            if ram_wdata_enhi_drive='1' then
-              cache_row0_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-              cache_row0_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-            end if;
-            show_cache0 := true;
-          elsif cache_row1_address_matches_ram_address='1' then
-            if ram_wdata_enlo_drive='1' then
-              cache_row1_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-              cache_row1_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-            end if;
-            if ram_wdata_enhi_drive='1' then
-              cache_row1_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-              cache_row1_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-            end if;
-            show_cache1 := true;
-          else
-            if random_bits(1)='0' then
-              report "Zeroing cache_row0_valids";
-              cache_row0_valids <= (others => '0');
-              cache_row0_address <= ram_address_drive(26 downto 3);
-              cache_row0_address_matches_ram_address <= '1';
-              if ram_wdata_enlo_drive='1' then
-                cache_row0_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-                cache_row0_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-              end if;
-              if ram_wdata_enhi_drive='1' then
-                cache_row0_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-                cache_row0_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-              end if;
-              show_cache0 := true;
-            else
-              report "Zeroing cache_row1_valids";
-              cache_row1_valids <= (others => '0');
-              cache_row1_address <= ram_address_drive(26 downto 3);
-              cache_row1_address_matches_ram_address <= '1';
-              if ram_wdata_enlo_drive='1' then
-                cache_row1_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-                cache_row1_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-              end if;
-              if ram_wdata_enhi_drive='1' then
-                cache_row1_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-                cache_row1_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-              end if;
-              show_cache1 := true;
-            end if;
-          end if;
-
-          -- Fetch takes 2 cycles, so schedule one cycle before last read
-          -- and shift, so that it happens after that last shift, but
-          -- before it is needed again.
-          if background_write_count = 0 then
-            -- See if we have another write collect that we can
-            -- continue with
-            -- XXX We suspect that chained writes might be problematic on the
-            -- external hyperram for some strange reason, so disable them.
-            if write_continues /= 0 and background_chained_write='1' then
-              if background_write_fetch = '0' then
-                report "WRITECONTINUE: Continuing write: Requesting fetch.";
-                background_write_fetch <= '1';
-              end if;
-            else
-              report "WRITECONTINUE: No continuation. Terminating write.";
-              report "asserting countdown_timeout";
-              countdown_timeout <= '1';
-            end if;
-          end if;
-
-          report "WRITE: LatencyWait state, bg_wr=" & std_logic'image(background_write)
-            & ", count=" & integer'image(background_write_count)
-            & ", background_write_fetch = " & std_logic'image(background_write_fetch)
-            & ", background_write_valids = " & to_string(background_write_valids)
-            & ", write_blocked=" & std_logic'image(write_blocked);
-
-          -- Now snap-shot the write buffer data, and mark the slot as flushed
-          if background_write = '1' and
-            ( (background_write_next_address_matches_collect0 = '1')
-              or (background_write_next_address_matches_collect1 = '1') )
-          then
-            if background_chained_write = '0' then
-              report "WRITE: background_chained_write <= 1";
-            end if;
-            background_chained_write <= '1';
-          else
-            if background_chained_write = '1' then
-              report "WRITE: background_chained_write <= 0";
-            end if;
-            background_chained_write <= '0';
-
-            if hr_clock_phase165="11" and (background_write_valids = "00000000")
-              and (read_request='1' or write_request='1' or write_blocked='1') then
-              report "LatencyWait: Aborting tail of background write due to incoming job/write_blocked";
-              state <= HyperRAMFinishWriting;
-            end if;
-
-
-          end if;
-
-          if background_write_fetch = '1' then
-            report "WRITE: Doing fetch of background write data";
-            background_write_fetch <= '0';
-            background_write_next_address <= background_write_next_address + 1;
-            write_continues <= write_continues - 1;
-            background_write_count <= 7;
-            if background_write_next_address_matches_collect0 = '1' and background_write_source = '0' then
-              show_collect0 := true;
-              report "WRITE: background_write_data copied from write_collect0 (@ $"
-                & to_hstring(write_collect0_address&"000")
-                & "). Valids = " & to_string(write_collect0_valids)
-                & ", next addr was $" & to_hstring(background_write_next_address&"000");
-
-              background_write_next_address <= write_collect0_address + 1;
-              background_write_next_address_matches_collect0 <= '0';
-              background_write_next_address_matches_collect1 <= collect1_matches_collect0_plus_1;
-
-              background_write_data <= write_collect0_data;
-              background_write_valids <= write_collect0_valids;
-              write_collect0_flushed <= '1';
-
-            elsif background_write_next_address_matches_collect1 = '1' and background_write_source = '1' then
-              show_collect1 := true;
-              report "WRITE: background_write_data copied from write_collect1. Valids = " & to_string(write_collect1_valids)
-                & ", next addr was $" & to_hstring(background_write_next_address&"000");
-              background_write_next_address <= write_collect1_address + 1;
-              background_write_next_address_matches_collect0 <= collect0_matches_collect1_plus_1;
-              background_write_next_address_matches_collect1 <= '0';
-
-              background_write_data <= write_collect1_data;
-              background_write_valids <= write_collect1_valids;
-              write_collect1_flushed <= '1';
-            else
-              report "WRITE: Write is not chained.";
-              background_chained_write <= '0';
-            end if;
-          end if;
-
-          hr_clk_phaseshift <= write_phase_shift;
-          if countdown_timeout = '1' then
-            report "Advancing to HyperRAMFinishWriting";
-            state <= HyperRAMFinishWriting;
-          end if;
-
-          report "latency countdown = " & integer'image(countdown);
-
-          -- Begin write mask pre-amble
-          if ram_reading_held = '0' and countdown = 2 then
-            hr_rwds <= '0';
-            hr2_rwds <= '0';
-            hr_d <= x"BE"; -- "before" data byte
-            hr2_d <= x"BE"; -- "before" data byte
-          end if;
-
-          if countdown /= 0 then
-            countdown <= countdown - 1;
-          end if;
-          if countdown = 1 then
-            countdown_is_zero <= '1';
-          end if;
-          if countdown_is_zero = '1' then
-            if extra_latency='1' then
-              report "Waiting 6 more cycles for extra latency";
-              -- If we were asked to wait for extra latency,
-              -- then wait another 6 cycles.
-              extra_latency <= '0';
-              if hyperram0_select='1' then
-                countdown <= to_integer(extra_write_latency);
-              else
-                countdown <= to_integer(extra_write_latency2);
-              end if;
-              -- XXX Assumes extra_write_latency is not zero
-              countdown_is_zero <= '0';
-            else
-              -- Latency countdown for writing is over, we can now
-              -- begin writing bytes.
-
-              -- HyperRAM works on 16-bit fundamental transfers.
-              -- This means we need to have two half-cycles, and pick which
-              -- one we want to write during.
-              -- If RWDS is asserted, then the write is masked, i.e., won't
-              -- occur.
-              -- In this first
-
-              report "Presenting hr_d with ram_wdata or background data";
-              if background_write='1' then
-                report "WRITE: Writing background byte $" & to_hstring(background_write_data(0))
-                  & ", valids= " & to_string(background_write_valids)
-                  & ", background words left = " & integer'image(background_write_count);
-                hr_d <= background_write_data(0);
-                hr2_d <= background_write_data(0);
-
-                background_write_data(0) <= background_write_data(1);
-                background_write_data(1) <= background_write_data(2);
-                background_write_data(2) <= background_write_data(3);
-                background_write_data(3) <= background_write_data(4);
-                background_write_data(4) <= background_write_data(5);
-                background_write_data(5) <= background_write_data(6);
-                background_write_data(6) <= background_write_data(7);
-                background_write_data(7) <= x"00";
-
-                hr_rwds <= not background_write_valids(0);
-                hr2_rwds <= not background_write_valids(0);
-                background_write_valids(0 to 6) <= background_write_valids(1 to 7);
-                background_write_valids(7) <= '0';
-              else
-                -- XXX Doesn't handle 16-bit writes properly. But that's
-                -- okay, as they are only supported with the cache and
-                -- write-collecting, anyway.
-                hr_d <= ram_wdata;
-                hr2_d <= ram_wdata;
-                hr_rwds <= hyperram_access_address(0) xor write_byte_phase;
-                hr2_rwds <= hyperram_access_address(0) xor write_byte_phase;
-              end if;
-
-              -- Finish resetting write collectors when chaining
-              if write_collect0_dispatchable='0' and write_collect0_flushed='1' and write_collect0_toolate='1' then
-                report "WRITECONTINUE: Resetting collect0";
-                write_collect0_flushed <= '0';
-                write_collect0_toolate <= '0';
-                show_collect0 := true;
-              end if;
-              if write_collect1_dispatchable='0' and write_collect1_flushed='1' and write_collect1_toolate='1' then
-                report "WRITECONTINUE: Resetting collect1";
-                write_collect1_flushed <= '0';
-                write_collect1_toolate <= '0';
-                show_collect1 := true;
-              end if;
-
-              -- Write byte
-              write_byte_phase <= '1';
-              if background_write='0' then
-                if write_byte_phase = '0' and hyperram_access_address(0)='1' then
-                  hr_d <= x"ee"; -- even "masked" data byte
-                  hr2_d <= x"ee"; -- even "masked" data byte
-                elsif write_byte_phase = '1' and hyperram_access_address(0)='0' then
-                  hr_d <= x"0d"; -- odd "masked" data byte
-                  hr2_d <= x"0d"; -- odd "masked" data byte
-                end if;
-                if background_write_count /= 0 then
-                  background_write_count <= background_write_count - 1;
-                else
-                  state <= HyperRAMFinishWriting;
-                end if;
-              else
-                report "WRITE: Decrementing background_write_count from " & integer'image(background_write_count)
-                  & ", write_continues = " & integer'image(write_continues);
-                if background_write_count /= 0 then
-                  background_write_count <= background_write_count - 1;
-                  if background_write_count = 3 and write_continues /= 0 then
-                    report "WRITECONTINUE: Checking for chained writes (" & integer'image(write_continues) & " more continues allowed)";
-                    report "WRITECONTINUE: Am looking for $" & to_hstring(background_write_next_address&"000") &
-                      ", options are 0:$" & to_hstring(write_collect0_address&"000") &
-                      " and 1:$" & to_hstring(write_collect1_address&"000");
-                    show_collect0 := true;
-                    show_collect1 := true;
-                    -- Get ready to commit next write block, if one is there
-                    if write_continues /= 0 and write_collect0_toolate='0' and write_collect0_flushed = '0'
-                      and background_write_next_address_matches_collect0='1' then
-                      report "WRITECONTINUE: Marking collect0 @ $" & to_hstring(write_collect0_address&"000") & " for chained write.";
-                      write_collect0_toolate <= '1';
-                      background_write_source <= '0';
-                      report "background_write_source = 0";
-                      show_collect0 := true;
-                    elsif write_continues /= 0 and write_collect1_toolate='0' and write_collect1_flushed = '0'
-                      and background_write_next_address_matches_collect1='1' then
-                      report "WRITECONTINUE: Marking collect1 @ $" & to_hstring(write_collect1_address&"000") & " for chained write.";
-                      write_collect1_toolate <= '1';
-                      background_write_source <= '1';
-                      report "background_write_source = 1";
-                      show_collect1 := true;
-                    end if;
-                  end if;
-                end if;
-
-              end if;
-            end if;
-          end if;
         when HyperRAMDoWriteSlow =>
           pause_phase <= not pause_phase;
 
@@ -2067,8 +1744,6 @@ begin
               report "LatencyWait: Aborting tail of background write due to incoming job/write_blocked";
               state <= HyperRAMFinishWriting;
             end if;
-
-
           end if;
 
           if background_write_fetch = '1' then
@@ -2252,6 +1927,7 @@ begin
               end if;
             end if;
           end if;
+
         when HyperRAMFinishWriting =>
           -- Mask writing from here on.
           hr_cs0 <= '1';
@@ -2266,172 +1942,7 @@ begin
           rwr_waiting <= '1';
           report "returning to idle";
           state <= Idle;
-        when HyperRAMReadWait =>
-          hr_rwds <= 'Z';
-          hr2_rwds <= 'Z';
-          report "Presenting tri-state on hr_d";
-          hr_d <= (others => 'Z');
-          hr2_d <= (others => 'Z');
-          if countdown_is_zero = '0' then
-            countdown <= countdown - 1;
-          end if;
-          if countdown = 1 then
-            countdown_is_zero <= '1';
-          end if;
-          if countdown_is_zero = '1' then
-            -- Timed out waiting for read -- so return anyway, rather
-            -- than locking the machine hard forever.
-            rdata_hi <= x"DD";
-            rdata <= x"DD";
-            rdata(0) <= data_ready_toggle;
-            rdata(1) <= busy_internal;
-            report "asserting data_ready_strobe";
-            data_ready_strobe <= '1';
-            data_ready_strobe_hold <= '1';
-            rwr_counter <= rwr_delay;
-            rwr_waiting <= '1';
-            hr_clk_phaseshift <= write_phase_shift;
-            report "returning to idle";
-            state <= Idle;
-          end if;
 
-          -- After we have read the first 8 bytes, we know that we are no longer
-          -- required to provide any further direct output, so clear the
-          -- flag, so that the above logic can terminate a pre-fetch when required.
-          if byte_phase = 8 then
-            report "DISPATCH: Clearing is_expected_to_respond";
-            is_expected_to_respond <= false;
-          end if;
-
-          hr_clk_phaseshift <= read_phase_shift xor hyperram1_select;
-
-          if hyperram0_select='1' then
-            last_rwds <= hr_rwds;
-          else
-            last_rwds <= hr2_rwds;
-          end if;
-          -- HyperRAM drives RWDS basically to follow the clock.
-          -- But first valid data is when RWDS goes high, so we have to
-          -- wait until we see it go high.
---              report "DISPATCH watching for data: rwds=" & std_logic'image(hr_rwds) & ", clock=" & std_logic'image(hr_clock)
---                & ", rwds seen=" & std_logic'image(hr_rwds_high_seen);
-
-          if ((hr_rwds='1') and (hyperram0_select='1'))
-            or ((hr2_rwds='1') and (hyperram1_select='1'))
-          then
-            hr_rwds_high_seen <= '1';
---                if hr_rwds_high_seen = '0' then
-          --                report "DISPATCH saw hr_rwds go high at start of data stream";
---                end if;
-          else
-            hr_rwds_high_seen <= '0';
-          end if;
-          if (((hr_rwds='1') and (hyperram0_select='1'))
-              or ((hr2_rwds='1') and (hyperram1_select='1')))
-            or (hr_rwds_high_seen='1') then
-            -- Data has arrived: Latch either odd or even byte
-            -- as required.
-                  report "DISPATCH Saw read data = $" & to_hstring(hr_d);
-
-            -- Update cache
-            if (byte_phase < 8) then
-              -- Store the bytes in the cache row
-              if hyperram_access_address_matches_cache_row0 = '1' then
-                cache_row0_valids(to_integer(byte_phase)) <= '1';
-                report "hr_sample='1'";
-                report "hr_sample='0'";
-                if hyperram0_select='1' then
-                  cache_row0_data(to_integer(byte_phase)) <= hr_d;
-                else
-                  cache_row0_data(to_integer(byte_phase)) <= hr2_d;
-                end if;
-                show_cache0 := true;
-              elsif hyperram_access_address_matches_cache_row1 = '1' then
-                cache_row1_valids(to_integer(byte_phase)) <= '1';
-                report "hr_sample='1'";
-                report "hr_sample='0'";
-                if hyperram0_select='1' then
-                  cache_row1_data(to_integer(byte_phase)) <= hr_d;
-                else
-                  cache_row1_data(to_integer(byte_phase)) <= hr2_d;
-                end if;
-                show_cache1 := true;
-              elsif random_bits(1) = '0' then
-                report "Zeroing cache_row0_valids";
-                cache_row0_valids <= (others => '0');
-                cache_row0_address <= hyperram_access_address(26 downto 3);
-                hyperram_access_address_matches_cache_row0 <= '1';
-                cache_row0_valids(to_integer(byte_phase)) <= '1';
-                report "hr_sample='1'";
-                report "hr_sample='0'";
-                if hyperram0_select='1' then
-                  cache_row0_data(to_integer(byte_phase)) <= hr_d;
-                else
-                  cache_row0_data(to_integer(byte_phase)) <= hr2_d;
-                end if;
-                show_cache0 := true;
-              else
-                report "Zeroing cache_row1_valids";
-                cache_row1_valids <= (others => '0');
-                cache_row1_address <= hyperram_access_address(26 downto 3);
-                hyperram_access_address_matches_cache_row1 <= '1';
-                cache_row1_valids(to_integer(byte_phase)) <= '1';
-                report "hr_sample='1'";
-                report "hr_sample='0'";
-                if hyperram0_select='1' then
-                  cache_row1_data(to_integer(byte_phase)) <= hr_d;
-                else
-                  cache_row1_data(to_integer(byte_phase)) <= hr2_d;
-                end if;
-                show_cache1 := true;
-              end if;
-            end if;
-
-            -- Quickly return the correct byte
-            if to_integer(byte_phase) = (to_integer(hyperram_access_address(2 downto 0))+0) and is_expected_to_respond then
-              if hyperram0_select='1' then
-                report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d)
-                  & ", hyperram0_select="& std_logic'image(hyperram0_select)
-                  & ", hyperram1_select="& std_logic'image(hyperram1_select);
-                if rdata_16en='1' and byte_phase(0)='1' then
-                  rdata_hi <= hr_d;
-                else
-                  rdata <= hr_d;
-                end if;
-              else
-                report "DISPATCH: Returning freshly read data = $" & to_hstring(hr2_d)
-                  & ", hyperram0_select="& std_logic'image(hyperram0_select)
-                  & ", hyperram1_select="& std_logic'image(hyperram1_select);
-                if rdata_16en='1' and byte_phase(0)='1' then
-                  rdata_hi <= hr2_d;
-                else
-                  rdata <= hr2_d;
-                end if;
-              end if;
-              report "hr_return='1'";
-              report "hr_return='0'";
-              if rdata_16en='0' or byte_phase(0)='1' then
-                report "asserting data_ready_strobe";
-                data_ready_strobe <= '1';
-                data_ready_strobe_hold <= '1';
-              end if;
-            end if;
-            report "byte_phase = " & integer'image(to_integer(byte_phase));
-            if (byte_phase = 7)
-              or (byte_phase = 31) then
-              rwr_counter <= rwr_delay;
-              rwr_waiting <= '1';
-              report "returning to idle";
-              last_request_toggle <= request_toggle;
-              state <= Idle;
-              hr_cs0 <= '1';
-              hr_cs1 <= '1';
-              hr_clk_phaseshift <= write_phase_shift;
-              is_expected_to_respond <= false;
-            else
-              byte_phase <= byte_phase + 1;
-            end if;
-          end if;
         when HyperRAMReadWaitSlow =>
           hr_rwds <= 'Z';
           hr2_rwds <= 'Z';
@@ -2470,7 +1981,7 @@ begin
               -- than locking the machine hard forever.
               rdata_hi <= x"DD";
               rdata <= x"DD";
-              rdata(0) <= data_ready_toggle;
+              rdata(0) <= '0';
               rdata(1) <= busy_internal;
               report "asserting data_ready_strobe";
               data_ready_strobe <= '1';
@@ -2580,6 +2091,7 @@ begin
                   data_ready_strobe_hold <= '1';
                 end if;
               end if;
+
               if byte_phase = (hyperram_access_address_read_time_adjusted+1) and (rdata_16en='1') then
                 if hyperram0_select='1' then
                   report "DISPATCH: Returning freshly read high-byte data = $" & to_hstring(hr_d);
@@ -2595,11 +2107,10 @@ begin
                 report "asserting data_ready_strobe on high byte";
                 data_ready_strobe <= '1';
                 data_ready_strobe_hold <= '1';
-
               end if;
+
               report "byte_phase = " & integer'image(to_integer(byte_phase));
-              if (byte_phase = seven_plus_read_time_adjust)
-              then
+              if (byte_phase = seven_plus_read_time_adjust) then
                 rwr_counter <= rwr_delay;
                 rwr_waiting <= '1';
                 report "returning to idle";
@@ -2614,7 +2125,6 @@ begin
           end if;
       end case;
     end if;
-
   end process;
 end gothic;
 
