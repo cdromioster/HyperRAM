@@ -331,12 +331,7 @@ architecture gothic of hyperram_mega65 is
   signal write_request_prev : std_logic := '0';
 
 begin
-  process (pixelclock,clock163,clock325) is
-    variable clock_status_vector : unsigned(4 downto 0);
-    variable show_cache0 : boolean := false;
-    variable show_cache1 : boolean := false;
-    variable show_collect0 : boolean := false;
-    variable show_always : boolean := false;
+  process (pixelclock) is
   begin
     if rising_edge(pixelclock) then
 
@@ -420,8 +415,6 @@ begin
 
       if cache_row0_address = cache_row1_address and cache_row0_address /= x"ffffff" then
         report "ERROR: Cache row0 and row1 point to same address";
-        show_cache0 := true;
-        show_cache1 := true;
       end if;
 
 
@@ -430,7 +423,6 @@ begin
       -- We have to wipe the address and valids, so that they don't get stuck being
       -- used as stale sources for cache reading.
       if write_collect0_dispatchable = '1' and write_collect0_toolate = '1' and write_collect0_flushed = '1' then
-        show_collect0 := true;
         report "WRITE: Clearing collect0";
         write_collect0_address <= (others => '1');
         write_collect0_dispatchable <= '0';
@@ -454,7 +446,6 @@ begin
           end if;
           write_collect0_address <= queued_waddr(26 downto 3);
           write_collect0_dispatchable <= '1';
-          show_collect0 := true;
 
           queued_write <= '0';
         elsif queued2_write='1' then
@@ -474,7 +465,6 @@ begin
           end if;
           write_collect0_address <= queued2_waddr(26 downto 3);
           write_collect0_dispatchable <= '1';
-          show_collect0 := true;
 
           queued2_write <= '0';
         end if;
@@ -516,7 +506,6 @@ begin
         end if;
         write_collect0_address <= queued_waddr(26 downto 3);
         write_collect0_dispatchable <= '1';
-        show_collect0 := true;
 
         queued_write <= '0';
 
@@ -551,7 +540,6 @@ begin
                 write_collect0_valids(to_integer(address(2 downto 0))+1) <= '1';
                 write_collect0_data(to_integer(address(2 downto 0))+1) <= wdata_hi;
               end if;
-              show_collect0 := true;
             elsif write_collect0_dispatchable = '0' and write_collect0_toolate='0' then
               write_collect0_valids <= (others => '0');
               if wen_lo='1' then
@@ -567,7 +555,6 @@ begin
               write_collect0_dispatchable <= '1';
               -- Block further writes if we already have one busy write buffer
               write_blocked <= '1';
-              show_collect0 := true;
             else
               -- No write collection point that we can use, so just block until
               -- one becomes available
@@ -607,63 +594,14 @@ begin
         end if;
       end if;
     end if;
+  end process;
 
+  process (clock325) is
+    variable clock_status_vector : unsigned(4 downto 0);
+    begin
     -- Optionally delay HR_CLK by 1/2 an 160MHz clock cycle
     -- (actually just by optionally inverting it)
     if rising_edge(clock325) then
-
-      if show_cache0 or show_always then
-        report "cache_row0_address_matches_cache_row_update_address="
-          & std_logic'image(cache_row0_address_matches_cache_row_update_address)
-          & ", cache_row_update_address=$" & to_hstring(cache_row_update_address&"000");
-        report "CACHE cache0: address=$" & to_hstring(cache_row0_address&"000") & ", valids=" & to_string(cache_row0_valids)
-          & ", data = "
-          & to_hstring(cache_row0_data(0)) & " "
-          & to_hstring(cache_row0_data(1)) & " "
-          & to_hstring(cache_row0_data(2)) & " "
-          & to_hstring(cache_row0_data(3)) & " "
-          & to_hstring(cache_row0_data(4)) & " "
-          & to_hstring(cache_row0_data(5)) & " "
-          & to_hstring(cache_row0_data(6)) & " "
-          & to_hstring(cache_row0_data(7)) & " ";
-        show_cache0 := false;
-      end if;
-
-      if show_cache1 or show_always then
-        report "CACHE cache1: address=$" & to_hstring(cache_row1_address&"000") & ", valids=" & to_string(cache_row1_valids)
-          & ", data = "
-          & to_hstring(cache_row1_data(0)) & " "
-          & to_hstring(cache_row1_data(1)) & " "
-          & to_hstring(cache_row1_data(2)) & " "
-          & to_hstring(cache_row1_data(3)) & " "
-          & to_hstring(cache_row1_data(4)) & " "
-          & to_hstring(cache_row1_data(5)) & " "
-          & to_hstring(cache_row1_data(6)) & " "
-          & to_hstring(cache_row1_data(7)) & " ";
-        show_cache1 := false;
-      end if;
-      if show_collect0 or show_always then
-        report "CACHE write0: $" & to_hstring(write_collect0_address&"000") & ", v=" & to_string(write_collect0_valids)
-          & ", d=" & std_logic'image(write_collect0_dispatchable)
-          & ", late=" & std_logic'image(write_collect0_toolate)
-          & ", fl=" & std_logic'image(write_collect0_flushed)
-          & ", data = "
-          & to_hstring(write_collect0_data(0)) & " "
-          & to_hstring(write_collect0_data(1)) & " "
-          & to_hstring(write_collect0_data(2)) & " "
-          & to_hstring(write_collect0_data(3)) & " "
-          & to_hstring(write_collect0_data(4)) & " "
-          & to_hstring(write_collect0_data(5)) & " "
-          & to_hstring(write_collect0_data(6)) & " "
-          & to_hstring(write_collect0_data(7)) & " ";
-        show_collect0 := false;
-      end if;
-      if show_always then
-        report "CACHE block0: $"
-          & ", byte_phase=" & integer'image(to_integer(byte_phase));
-      end if;
-
-
       hr_clock_phase_drive <= hr_clock_phase;
       hr_clock_phase <= hr_clock_phase + 1;
       -- Changing at the end of a phase cycle prevents us having any
@@ -759,7 +697,10 @@ begin
                        hr2_clk_p <= '0'; hr2_clk_n <= '1';
       end case;
     end if;
+  end process;
 
+  process (clock163) is
+  begin
     if rising_edge(clock163) then
       hr_clock_phase165 <= hr_clock_phase165 + 1;
 
@@ -969,9 +910,6 @@ begin
 
           -- Clear write buffer flags when they are empty
           if write_collect0_dispatchable = '0' then
-            if write_collect0_toolate = '1' then
-              show_collect0 := true;
-            end if;
             write_collect0_toolate <= '0';
             write_collect0_flushed <= '0';
           end if;
@@ -1214,7 +1152,6 @@ begin
                 -- 48.
                 if background_write='1' then
                   write_collect0_flushed <= '1';
-                  show_collect0 := true;
                 end if;
 
                 report "Finished writing config register";
@@ -1244,7 +1181,6 @@ begin
                   write_continues <= write_continues_max;
                   write_collect0_toolate <= '1';
                   write_collect0_flushed <= '0';
-                  show_collect0 := true;
                 end if;
                 countdown_timeout <= '0';
                 hr_clk_fast <= '0';
@@ -1339,7 +1275,6 @@ begin
               -- 48.
               if background_write='1' then
                 write_collect0_flushed <= '1';
-                show_collect0 := true;
               end if;
 
               report "Finished writing config register";
@@ -1369,7 +1304,6 @@ begin
                 write_continues <= write_continues_max;
                 write_collect0_toolate <= '1';
                 write_collect0_flushed <= '0';
-                show_collect0 := true;
               end if;
               countdown_timeout <= '0';
               hr_clk_fast <= '0';
@@ -1439,7 +1373,6 @@ begin
               cache_row0_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
               cache_row0_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
             end if;
-            show_cache0 := true;
           elsif cache_row1_address_matches_ram_address='1' then
             if ram_wdata_enlo_drive='1' then
               cache_row1_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
@@ -1449,7 +1382,6 @@ begin
               cache_row1_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
               cache_row1_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
             end if;
-            show_cache1 := true;
           else
             if random_bits(1)='0' then
               report "Zeroing cache_row0_valids";
@@ -1464,7 +1396,6 @@ begin
                 cache_row0_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
                 cache_row0_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
               end if;
-              show_cache0 := true;
             else
               report "Zeroing cache_row1_valids";
               cache_row1_valids <= (others => '0');
@@ -1478,7 +1409,6 @@ begin
                 cache_row1_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
                 cache_row1_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
               end if;
-              show_cache1 := true;
             end if;
           end if;
 
@@ -1536,7 +1466,6 @@ begin
             write_continues <= write_continues - 1;
             background_write_count <= 7;
             if background_write_next_address_matches_collect0 = '1' then
-              show_collect0 := true;
               report "WRITE: background_write_data copied from write_collect0 (@ $"
                 & to_hstring(write_collect0_address&"000")
                 & "). Valids = " & to_string(write_collect0_valids)
@@ -1638,7 +1567,6 @@ begin
                   report "WRITECONTINUE: Resetting collect0";
                   write_collect0_flushed <= '0';
                   write_collect0_toolate <= '0';
-                  show_collect0 := true;
                 end if;
 
                 -- Write byte
@@ -1665,13 +1593,11 @@ begin
                       report "WRITECONTINUE: Checking for chained writes (" & integer'image(write_continues) & " more continues allowed)";
                       report "WRITECONTINUE: Am looking for $" & to_hstring(background_write_next_address&"000") &
                         ", options are 0:$" & to_hstring(write_collect0_address&"000");
-                      show_collect0 := true;
                       -- Get ready to commit next write block, if one is there
                       if write_continues /= 0 and write_collect0_toolate='0' and write_collect0_flushed = '0'
                         and background_write_next_address_matches_collect0='1' then
                         report "WRITECONTINUE: Marking collect0 @ $" & to_hstring(write_collect0_address&"000") & " for chained write.";
                         write_collect0_toolate <= '1';
-                        show_collect0 := true;
                       end if;
                     end if;
                   end if;
@@ -1784,7 +1710,6 @@ begin
                   else
                     cache_row0_data(to_integer(byte_phase)) <= hr2_d;
                   end if;
-                  show_cache0 := true;
                 elsif hyperram_access_address_matches_cache_row1 = '1' then
                   cache_row1_valids(to_integer(byte_phase)) <= '1';
                   report "hr_sample='1'";
@@ -1794,7 +1719,6 @@ begin
                   else
                     cache_row1_data(to_integer(byte_phase)) <= hr2_d;
                   end if;
-                  show_cache1 := true;
                 elsif random_bits(1) = '0' then
                   report "Zeroing cache_row0_valids";
                   cache_row0_valids <= (others => '0');
@@ -1808,7 +1732,6 @@ begin
                   else
                     cache_row0_data(to_integer(byte_phase)) <= hr2_d;
                   end if;
-                  show_cache0 := true;
                 else
                   report "Zeroing cache_row1_valids";
                   cache_row1_valids <= (others => '0');
@@ -1822,7 +1745,6 @@ begin
                   else
                     cache_row1_data(to_integer(byte_phase)) <= hr2_d;
                   end if;
-                  show_cache1 := true;
                 end if;
               end if;
 
