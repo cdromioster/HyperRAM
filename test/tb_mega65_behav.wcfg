@@ -13,13 +13,13 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="150219132fs"></ZoomStartTime>
-      <ZoomEndTime time="150592174fs"></ZoomEndTime>
-      <Cursor1Time time="150530000fs"></Cursor1Time>
+      <ZoomStartTime time="149870000fs"></ZoomStartTime>
+      <ZoomEndTime time="151068001fs"></ZoomEndTime>
+      <Cursor1Time time="150120000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="238"></NameColumnWidth>
-      <ValueColumnWidth column_width="81"></ValueColumnWidth>
+      <NameColumnWidth column_width="235"></NameColumnWidth>
+      <ValueColumnWidth column_width="79"></ValueColumnWidth>
    </column_width_setting>
    <WVObjectSize size="16" />
    <wvobject type="logic" fp_name="/tb/stop_test">
@@ -95,83 +95,6 @@
          <obj_property name="ObjectShortName">avm_waitrequest</obj_property>
       </wvobject>
    </wvobject>
-   <wvobject type="group" fp_name="group74">
-      <obj_property name="label">controller</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/request_counter">
-         <obj_property name="ElementShortName">request_counter</obj_property>
-         <obj_property name="ObjectShortName">request_counter</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/read_request">
-         <obj_property name="ElementShortName">read_request</obj_property>
-         <obj_property name="ObjectShortName">read_request</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/write_request">
-         <obj_property name="ElementShortName">write_request</obj_property>
-         <obj_property name="ObjectShortName">write_request</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/address">
-         <obj_property name="ElementShortName">address[26:0]</obj_property>
-         <obj_property name="ObjectShortName">address[26:0]</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/wdata">
-         <obj_property name="ElementShortName">wdata[7:0]</obj_property>
-         <obj_property name="ObjectShortName">wdata[7:0]</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/wdata_hi">
-         <obj_property name="ElementShortName">wdata_hi[7:0]</obj_property>
-         <obj_property name="ObjectShortName">wdata_hi[7:0]</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/wen_hi">
-         <obj_property name="ElementShortName">wen_hi</obj_property>
-         <obj_property name="ObjectShortName">wen_hi</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/wen_lo">
-         <obj_property name="ElementShortName">wen_lo</obj_property>
-         <obj_property name="ObjectShortName">wen_lo</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/rdata_hi">
-         <obj_property name="ElementShortName">rdata_hi[7:0]</obj_property>
-         <obj_property name="ObjectShortName">rdata_hi[7:0]</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/rdata_16en">
-         <obj_property name="ElementShortName">rdata_16en</obj_property>
-         <obj_property name="ObjectShortName">rdata_16en</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/tb/i_hyperram/i_hyperram_mega65/rdata">
-         <obj_property name="ElementShortName">rdata[7:0]</obj_property>
-         <obj_property name="ObjectShortName">rdata[7:0]</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/data_ready_strobe">
-         <obj_property name="ElementShortName">data_ready_strobe</obj_property>
-         <obj_property name="ObjectShortName">data_ready_strobe</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/busy">
-         <obj_property name="ElementShortName">busy</obj_property>
-         <obj_property name="ObjectShortName">busy</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/pixelclock">
-         <obj_property name="ElementShortName">pixelclock</obj_property>
-         <obj_property name="ObjectShortName">pixelclock</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/clock163">
-         <obj_property name="ElementShortName">clock163</obj_property>
-         <obj_property name="ObjectShortName">clock163</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/clock325">
-         <obj_property name="ElementShortName">clock325</obj_property>
-         <obj_property name="ObjectShortName">clock325</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/hr_clk">
-         <obj_property name="ElementShortName">hr_clk</obj_property>
-         <obj_property name="ObjectShortName">hr_clk</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram/i_hyperram_mega65/hr_clk_phaseshift">
-         <obj_property name="ElementShortName">hr_clk_phaseshift</obj_property>
-         <obj_property name="ObjectShortName">hr_clk_phaseshift</obj_property>
-      </wvobject>
-   </wvobject>
    <wvobject type="group" fp_name="group31">
       <obj_property name="label">Device</obj_property>
       <obj_property name="DisplayName">label</obj_property>
@@ -215,5 +138,86 @@
    <wvobject type="array" fp_name="/tb/sys_dq">
       <obj_property name="ElementShortName">sys_dq[7:0]</obj_property>
       <obj_property name="ObjectShortName">sys_dq[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="group" fp_name="group62">
+      <obj_property name="label">Controller</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/request_counter">
+         <obj_property name="ElementShortName">request_counter</obj_property>
+         <obj_property name="ObjectShortName">request_counter</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/read_request">
+         <obj_property name="ElementShortName">read_request</obj_property>
+         <obj_property name="ObjectShortName">read_request</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_request">
+         <obj_property name="ElementShortName">write_request</obj_property>
+         <obj_property name="ObjectShortName">write_request</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/address">
+         <obj_property name="ElementShortName">address[26:0]</obj_property>
+         <obj_property name="ObjectShortName">address[26:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/wdata">
+         <obj_property name="ElementShortName">wdata[7:0]</obj_property>
+         <obj_property name="ObjectShortName">wdata[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/wdata_hi">
+         <obj_property name="ElementShortName">wdata_hi[7:0]</obj_property>
+         <obj_property name="ObjectShortName">wdata_hi[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/wen_hi">
+         <obj_property name="ElementShortName">wen_hi</obj_property>
+         <obj_property name="ObjectShortName">wen_hi</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/wen_lo">
+         <obj_property name="ElementShortName">wen_lo</obj_property>
+         <obj_property name="ObjectShortName">wen_lo</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/rdata_hi">
+         <obj_property name="ElementShortName">rdata_hi[7:0]</obj_property>
+         <obj_property name="ObjectShortName">rdata_hi[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/rdata_16en">
+         <obj_property name="ElementShortName">rdata_16en</obj_property>
+         <obj_property name="ObjectShortName">rdata_16en</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/rdata">
+         <obj_property name="ElementShortName">rdata[7:0]</obj_property>
+         <obj_property name="ObjectShortName">rdata[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/data_ready_strobe">
+         <obj_property name="ElementShortName">data_ready_strobe</obj_property>
+         <obj_property name="ObjectShortName">data_ready_strobe</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/busy">
+         <obj_property name="ElementShortName">busy</obj_property>
+         <obj_property name="ObjectShortName">busy</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/queued2_write">
+         <obj_property name="ElementShortName">queued2_write</obj_property>
+         <obj_property name="ObjectShortName">queued2_write</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/queued_write">
+         <obj_property name="ElementShortName">queued_write</obj_property>
+         <obj_property name="ObjectShortName">queued_write</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect0_dispatchable">
+         <obj_property name="ElementShortName">write_collect0_dispatchable</obj_property>
+         <obj_property name="ObjectShortName">write_collect0_dispatchable</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect0_toolate">
+         <obj_property name="ElementShortName">write_collect0_toolate</obj_property>
+         <obj_property name="ObjectShortName">write_collect0_toolate</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect1_dispatchable">
+         <obj_property name="ElementShortName">write_collect1_dispatchable</obj_property>
+         <obj_property name="ObjectShortName">write_collect1_dispatchable</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect1_toolate">
+         <obj_property name="ElementShortName">write_collect1_toolate</obj_property>
+         <obj_property name="ObjectShortName">write_collect1_toolate</obj_property>
+      </wvobject>
    </wvobject>
 </wave_config>
