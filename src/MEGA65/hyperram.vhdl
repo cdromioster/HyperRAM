@@ -61,16 +61,16 @@ architecture synthesis of hyperram_mega65 is
   -- back down to ~120 -- 132ns, which should be enough.
   -- Actually, all of that is a bit moot, since it seems that we just have to apply
   -- some trial and error to get it right. 1 seems right with the current settings.
-  constant rwr_delay : unsigned(7 downto 0) := to_unsigned(1,8);
+  constant C_RWR_DELAY : unsigned(7 downto 0) := to_unsigned(1,8);
   -- 4 is correct for the part we have in the MEGA65, after we have set the
   -- config register to minimise latency.
-  constant write_latency : unsigned(7 downto 0) := to_unsigned(5,8);
+  constant C_WRITE_LATENCY : unsigned(7 downto 0) := to_unsigned(5,8);
   -- And the matching extra latency is 5
-  constant extra_write_latency : unsigned(7 downto 0) := to_unsigned(7,8);
-  constant read_phase_shift : std_logic := '0';
-  constant write_phase_shift : std_logic := '1';
-  constant write_continues_max : integer range 0 to 255 := 16;
-  constant read_time_adjust : integer range 0 to 255 := 0;
+  constant C_EXTRA_WRITE_LATENCY : unsigned(7 downto 0) := to_unsigned(7,8);
+  constant C_READ_PHASE_SHIFT : std_logic := '0';
+  constant C_WRITE_PHASE_SHIFT : std_logic := '1';
+  constant C_WRITE_CONTINUES_MAX : integer range 0 to 255 := 16;
+  constant C_READ_TIME_ADJUST : integer range 0 to 255 := 0;
 
   signal x4_hr_clk_phaseshift_current : std_logic := '1';
   signal x4_hr_clk_fast_current : std_logic := '1';
@@ -209,7 +209,6 @@ begin
         x1_request_counter_int <= not x1_request_counter_int;
         request_counter <= x1_request_counter_int;
       end if;
-
 
       -- Clear write buffers once they have been flushed.
       -- We have to wipe the address and valids, so that they don't get stuck being
@@ -443,8 +442,8 @@ begin
         x2_read_request_delatch <= '0';
       end if;
 
-      x2_hyperram_access_address_read_time_adjusted <= to_unsigned(to_integer(x2_hyperram_access_address(2 downto 0))+read_time_adjust,6);
-      x2_seven_plus_read_time_adjust <= to_unsigned(7 + read_time_adjust,6);
+      x2_hyperram_access_address_read_time_adjusted <= to_unsigned(to_integer(x2_hyperram_access_address(2 downto 0))+C_READ_TIME_ADJUST,6);
+      x2_seven_plus_read_time_adjust <= to_unsigned(7 + C_READ_TIME_ADJUST,6);
 
       if x1_write_collect0_address = x2_background_write_next_address then
         x2_background_write_next_address_matches_collect0 <= '1';
@@ -499,7 +498,7 @@ begin
           x2_is_expected_to_respond <= x1_ram_normalfetch;
 
           -- All commands need the clock offset by 1/2 cycle
-          x2_hr_clk_phaseshift <= write_phase_shift;
+          x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
           x2_hr_clk_fast <= '1';
 
           x2_pause_phase <= '0';
@@ -521,13 +520,8 @@ begin
 
           -- Phase 101 guarantees that the clock base change will happen
           -- within the comming clock cycle
-          if x2_rwr_waiting='0' and  x2_hr_clock_phase165 = "10" then
-            if (x1_request_toggle /= x2_last_request_toggle)
-              -- Only commence reads AFTER all pending writes have flushed,
-              -- to ensure cache coherence (there are corner-cases here with
-              -- chained writes, block reads and other bits and pieces).
-              and x1_write_collect0_dispatchable='0' then
-              report "WAITING for job";
+          if x2_rwr_waiting='0' and x2_hr_clock_phase165 = "10" then
+            if x1_request_toggle /= x2_last_request_toggle and x1_write_collect0_dispatchable='0' then
               x2_ram_reading_held <= x1_ram_reading;
 
               if x1_ram_reading = '1' then
@@ -535,17 +529,15 @@ begin
                 x2_request_accepted <= x1_request_toggle;
                 x2_last_request_toggle <= x1_request_toggle;
                 state <= ReadSetup;
-                report "Accepting job";
                 x2_busy_internal <= '1';
               else
                 report "Waiting to start write";
                 x2_request_accepted <= x1_request_toggle;
                 x2_last_request_toggle <= x1_request_toggle;
                 state <= WriteSetup;
-                report "Accepting job";
                 x2_busy_internal <= '1';
               end if;
-            elsif (x1_write_collect0_dispatchable = '1') then
+            elsif x1_write_collect0_dispatchable = '1' then
               -- Do background write.
               x2_busy_internal <= '0';
               x2_request_accepted <= x1_request_toggle;
@@ -553,16 +545,12 @@ begin
 
               report "DISPATCH: Writing out collect0 @ $" & to_hstring(x1_write_collect0_address&"000");
 
-              -- Mark the write buffer as being processed.
               x2_write_collect0_flushed <= '0';
-              -- And that it is not (yet) too late to add extra bytes to the write.
               x2_write_collect0_toolate <= '0';
-
               x2_background_write_next_address <= x1_write_collect0_address;
               x2_background_write_next_address_matches_collect0 <= '1';
               x2_background_write <= '1';
               x2_background_write_fetch <= '1';
-
               x2_config_reg_write <= x1_write_collect0_address(25);
 
               -- Prepare command vector
@@ -576,21 +564,13 @@ begin
               x2_hr_command(1 downto 0) <= "00";
               hr_reset <= '1'; -- active low reset
 
-
               x2_hyperram_access_address(26 downto 3) <= x1_write_collect0_address;
               x2_hyperram_access_address(2 downto 0) <= (others => '0');
 
               x2_ram_reading_held <= '0';
-
-              -- This is the delay before we assert CS
-
-              -- We have to use this intermediate stage to get the clock
-              -- phase right.
               state <= StartBackgroundWrite;
 
               if x1_write_collect0_address(25)='1' then
-                -- 48 bits of CA followed by 16 bit register value
-                -- (we shift the buffered config register values out automatically)
                 x2_countdown <= 6 + 1;
               else
                 x2_countdown <= 6;
@@ -608,7 +588,7 @@ begin
           report "in StartBackgroundWrite to synchronise with clock";
           x2_pause_phase <= '0';
           state <= HyperRAMOutputCommandSlow;
-          x2_hr_clk_phaseshift <= write_phase_shift;
+          x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
           x2_hr_clk_fast <= '0';
 
         when ReadSetup =>
@@ -616,11 +596,7 @@ begin
 
           -- Prepare command vector
           x2_hr_command(47) <= '1'; -- READ
-          -- Map actual RAM to bottom 32MB of 64MB space (repeated 4x)
-          -- and registers to upper 32MB
---            x2_hr_command(46) <= '1'; -- Memory address space (1) / Register
-          x2_hr_command(46) <= x1_ram_address(25); -- Memory address space (1) / Register
-                                             -- address space select (0) ?
+          x2_hr_command(46) <= x1_ram_address(25); -- Memory address space (1) / Register address space select (0) ?
           x2_hr_command(45) <= '1'; -- Linear access (not wrapped)
           x2_hr_command(44 downto 37) <= (others => '0'); -- unused upper address bits
           x2_hr_command(34 downto 16) <= x1_ram_address(22 downto 4);
@@ -637,7 +613,6 @@ begin
             x2_hr_command(0) <= x1_ram_address(3);
           end if;
 
-
           x2_hyperram_access_address <= x1_ram_address;
 
           hr_reset <= '1'; -- active low reset
@@ -645,19 +620,17 @@ begin
 
           state <= HyperRAMOutputCommandSlow;
           x2_hr_clk_fast <= '0';
-          x2_hr_clk_phaseshift <= write_phase_shift;
+          x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
 
           x2_countdown <= 6;
           x2_config_reg_write <= '0';
           x2_countdown_is_zero <= '0';
 
         when WriteSetup =>
-
           report "Preparing x2_hr_command etc for write to $" & to_hstring(x1_ram_address);
 
           x2_background_write_count <= 2;
           x2_background_write <= '0';
-
           x2_config_reg_write <= x1_ram_address(25);
 
           -- Prepare command vector
@@ -666,15 +639,12 @@ begin
           x2_hr_command(47) <= '0'; -- WRITE
           x2_hr_command(46) <= x1_ram_address(25); -- Memory, not register space
           x2_hr_command(45) <= '1'; -- linear
-
           x2_hr_command(44 downto 35) <= (others => '0'); -- unused upper address bits
           x2_hr_command(15 downto 3) <= (others => '0'); -- reserved bits
-
           x2_hr_command(34 downto 16) <= x1_ram_address(22 downto 4);
           x2_hr_command(2 downto 0) <= x1_ram_address(3 downto 1);
 
           hr_reset <= '1'; -- active low reset
-
 
           x2_hyperram_access_address <= x1_ram_address;
 
@@ -683,11 +653,10 @@ begin
           if x2_start_delay_expired = '1' then
             state <= HyperRAMOutputCommandSlow;
             x2_hr_clk_fast <= '0';
-            x2_hr_clk_phaseshift <= write_phase_shift;
+            x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
           end if;
+
           if x1_ram_address(25)='1' then
-            -- 48 bits of CA followed by 16 bit register value
-            -- (we shift the buffered config register values out automatically)
             x2_countdown <= 6 + 1;
           else
             x2_countdown <= 6;
@@ -699,13 +668,12 @@ begin
           report "x2_hr_command = $" & to_hstring(x2_hr_command);
           -- Call HyperRAM to attention
           hr_cs0 <= '0';
-
           hr_rwds <= 'Z';
 
           x2_pause_phase <= not x2_pause_phase;
 
           if x2_pause_phase='1' then
-            x2_hr_clk_phaseshift <= write_phase_shift;
+            x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
 
             if x2_countdown_timeout='1' then
               -- Finished shifting out
@@ -738,20 +706,15 @@ begin
                 -- Initial latency is reduced by 2 cycles for the last bytes
                 -- of the access command, and by 1 more to cover state
                 -- machine latency
-                x2_countdown <= to_integer(write_latency);
-                -- XXX Doesn't work if write_latency(2) is $00
+                x2_countdown <= to_integer(C_WRITE_LATENCY);
                 x2_countdown_is_zero <= '0';
-
 
                 -- We are not just about ready to start writing, so mark the
                 -- write buffer as too late to be added to, because we will
                 -- snap-shot it in a moment.
                 if x2_background_write = '1' then
                   x2_background_write_count <= 4 + 2;
-                  -- We know we can do upto 128 bytes at least per write,
-                  -- before a refresh is required. So allow 16x8 byte writes to
-                  -- be chained.
-                  x2_write_continues <= write_continues_max;
+                  x2_write_continues <= C_WRITE_CONTINUES_MAX;
                   x2_write_collect0_toolate <= '1';
                   x2_write_collect0_flushed <= '0';
                 end if;
@@ -761,7 +724,7 @@ begin
               end if;
             end if;
 
-          else
+          else -- if x2_pause_phase='1' then
 
             -- Toggle data while clock steady
             report "Presenting x2_hr_command byte on hr_d = $" & to_hstring(x2_hr_command(47 downto 40))
@@ -790,14 +753,15 @@ begin
 
             if x2_countdown = 3 and (x2_config_reg_write='0' or x2_ram_reading_held='1') then
               x2_extra_latency <= hr_rwds;
-              if (hr_rwds='1')
-              then
+              if hr_rwds='1' then
                 report "Applying extra latency";
               end if;
             end if;
+
             if x2_countdown = 1 then
               x2_countdown_is_zero <= '1';
             end if;
+
             if x2_countdown /= 0 then
               x2_countdown <= x2_countdown - 1;
             else
@@ -811,22 +775,11 @@ begin
         when HyperRAMDoWriteSlow =>
           x2_pause_phase <= not x2_pause_phase;
 
-          -- Fetch takes 2 cycles, so schedule one cycle before last read
-          -- and shift, so that it happens after that last shift, but
-          -- before it is needed again.
           if x2_background_write_count = 0 and x2_pause_phase = '0' then
-            -- See if we have another write collect that we can
-            -- continue with
-            -- XXX We suspect that chained writes might be problematic on the
-            -- external hyperram for some strange reason, so disable them.
             if x2_write_continues /= 0 and x2_background_chained_write='1' then
-              if x2_background_write_fetch = '0' then
-                report "WRITECONTINUE: Continuing write: Requesting fetch.";
-                x2_background_write_fetch <= '1';
-              end if;
+              x2_background_write_fetch <= '1';
             else
               report "WRITECONTINUE: No continuation. Terminating write.";
-              report "asserting x2_countdown_timeout";
               x2_countdown_timeout <= '1';
             end if;
           end if;
@@ -838,17 +791,9 @@ begin
             & ", x1_write_blocked=" & std_logic'image(x1_write_blocked);
 
           -- Now snap-shot the write buffer data, and mark the slot as flushed
-          if x2_background_write = '1' and
-             (x2_background_write_next_address_matches_collect0 = '1')
-          then
-            if x2_background_chained_write = '0' then
-              report "WRITE: x2_background_chained_write <= 1";
-            end if;
+          if x2_background_write = '1' and x2_background_write_next_address_matches_collect0 = '1' then
             x2_background_chained_write <= '1';
           else
-            if x2_background_chained_write = '1' then
-              report "WRITE: x2_background_chained_write <= 0";
-            end if;
             x2_background_chained_write <= '0';
 
             if x2_hr_clock_phase165="11" and (x2_background_write_valids = "00000000")
@@ -872,10 +817,9 @@ begin
 
               x2_background_write_next_address <= x1_write_collect0_address + 1;
               x2_background_write_next_address_matches_collect0 <= '0';
-
-              x2_background_write_data <= x1_write_collect0_data;
+              x2_background_write_data   <= x1_write_collect0_data;
               x2_background_write_valids <= x1_write_collect0_valids;
-              x2_write_collect0_flushed <= '1';
+              x2_write_collect0_flushed  <= '1';
             else
               report "WRITE: Write is not chained.";
               x2_background_chained_write <= '0';
@@ -883,15 +827,11 @@ begin
           end if;
 
           if x2_pause_phase = '1' then
-            x2_hr_clk_phaseshift <= write_phase_shift;
+            x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
             if x2_countdown_timeout = '1' then
-              report "Advancing to HyperRAMFinishWriting";
               state <= HyperRAMFinishWriting;
             end if;
           else
-
-            report "latency x2_countdown = " & integer'image(x2_countdown);
-
             -- Begin write mask pre-amble
             if x2_ram_reading_held = '0' and x2_countdown = 2 then
               hr_rwds <= '0';
@@ -901,29 +841,18 @@ begin
             if x2_countdown /= 0 then
               x2_countdown <= x2_countdown - 1;
             end if;
+
             if x2_countdown = 1 then
               x2_countdown_is_zero <= '1';
             end if;
+
             if x2_countdown_is_zero = '1' then
               if x2_extra_latency='1' then
                 report "Waiting 6 more cycles for extra latency";
-                -- If we were asked to wait for extra latency,
-                -- then wait another 6 cycles.
                 x2_extra_latency <= '0';
-                x2_countdown <= to_integer(extra_write_latency);
-                -- XXX Assumes extra_write_latency is not zero
+                x2_countdown <= to_integer(C_EXTRA_WRITE_LATENCY);
                 x2_countdown_is_zero <= '0';
               else
-                -- Latency x2_countdown for writing is over, we can now
-                -- begin writing bytes.
-
-                -- HyperRAM works on 16-bit fundamental transfers.
-                -- This means we need to have two half-cycles, and pick which
-                -- one we want to write during.
-                -- If RWDS is asserted, then the write is masked, i.e., won't
-                -- occur.
-                -- In this first
-
                 report "Presenting hr_d with ram_wdata or background data";
                 if x2_background_write='1' then
                   report "WRITE: Writing background byte $" & to_hstring(x2_background_write_data(0))
@@ -961,11 +890,7 @@ begin
                 -- Write byte
                 x2_write_byte_phase <= '1';
                 if x2_background_write='0' then
-                  if x2_write_byte_phase = '0' and x2_hyperram_access_address(0)='1' then
-                    hr_d <= x"ee"; -- even "masked" data byte
-                  elsif x2_write_byte_phase = '1' and x2_hyperram_access_address(0)='0' then
-                    hr_d <= x"0d"; -- odd "masked" data byte
-                  end if;
+                  hr_d <= x"aa";
                   if x2_background_write_count /= 0 then
                     x2_background_write_count <= x2_background_write_count - 1;
                   else
@@ -978,8 +903,6 @@ begin
                     x2_background_write_count <= x2_background_write_count - 1;
                     if x2_background_write_count = 3 and x2_write_continues /= 0 then
                       report "WRITECONTINUE: Checking for chained writes (" & integer'image(x2_write_continues) & " more continues allowed)";
-                      report "WRITECONTINUE: Am looking for $" & to_hstring(x2_background_write_next_address&"000") &
-                        ", options are 0:$" & to_hstring(x1_write_collect0_address&"000");
                       -- Get ready to commit next write block, if one is there
                       if x2_write_continues /= 0 and x2_write_collect0_toolate='0' and x2_write_collect0_flushed = '0'
                         and x2_background_write_next_address_matches_collect0='1' then
@@ -988,7 +911,6 @@ begin
                       end if;
                     end if;
                   end if;
-
                 end if;
               end if;
             end if;
@@ -999,9 +921,8 @@ begin
           hr_cs0 <= '1';
           hr_rwds <= 'Z';
           hr_d <= x"FA"; -- "after" data byte
-          x2_hr_clk_phaseshift <= write_phase_shift;
-          report "clk_queue <= '00'";
-          x2_rwr_counter <= rwr_delay;
+          x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
+          x2_rwr_counter <= C_RWR_DELAY;
           x2_rwr_waiting <= '1';
           report "returning to idle";
           state <= Idle;
@@ -1020,53 +941,35 @@ begin
             x2_is_expected_to_respond <= false;
           end if;
 
-          if x2_pause_phase = '1' then
-            null;
-          else
-            x2_hr_clk_phaseshift <= read_phase_shift;
+          if x2_pause_phase = '0' then
+            x2_hr_clk_phaseshift <= C_READ_PHASE_SHIFT;
             if x2_countdown_is_zero = '0' then
               x2_countdown <= x2_countdown - 1;
             end if;
             if x2_countdown = 1 then
               x2_countdown_is_zero <= '1';
             end if;
+
             if x2_countdown_is_zero = '1' then
               -- Timed out waiting for read -- so return anyway, rather
               -- than locking the machine hard forever.
               rdata_hi <= x"DD";
               rdata <= x"DD";
-              rdata(0) <= '0';
-              rdata(1) <= x2_busy_internal;
-              report "asserting data_ready_strobe";
               data_ready_strobe <= '1';
               x2_data_ready_strobe_hold <= '1';
-              x2_rwr_counter <= rwr_delay;
+              x2_rwr_counter <= C_RWR_DELAY;
               x2_rwr_waiting <= '1';
               report "returning to idle";
               state <= Idle;
-              x2_hr_clk_phaseshift <= write_phase_shift;
+              x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
             end if;
 
             -- HyperRAM drives RWDS basically to follow the clock.
             -- But first valid data is when RWDS goes high, so we have to
             -- wait until we see it go high.
+            x2_hr_rwds_high_seen <= hr_rwds;
 
-            if (hr_rwds='1')
-            then
-              x2_hr_rwds_high_seen <= '1';
-            else
-              x2_hr_rwds_high_seen <= '0';
---                if x2_hr_rwds_high_seen = '0' then
-            --                report "DISPATCH saw hr_rwds go high at start of data stream";
---                end if;
-            end if;
-            if (hr_rwds='1')
-              or (x2_hr_rwds_high_seen='1') then
-              -- Data has arrived: Latch either odd or even byte
-              -- as required.
---                  report "DISPATCH Saw read data = $" & to_hstring(hr_d);
-
-              -- Quickly return the correct byte
+            if hr_rwds='1' or x2_hr_rwds_high_seen='1' then
               if x2_byte_phase = x2_hyperram_access_address_read_time_adjusted then
                 report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d);
                 rdata <= hr_d;
@@ -1086,13 +989,13 @@ begin
                 x2_data_ready_strobe_hold <= '1';
               end if;
 
-              if (x2_byte_phase = x2_seven_plus_read_time_adjust) then
-                x2_rwr_counter <= rwr_delay;
+              if x2_byte_phase = x2_seven_plus_read_time_adjust then
+                x2_rwr_counter <= C_RWR_DELAY;
                 x2_rwr_waiting <= '1';
                 report "returning to idle";
                 state <= Idle;
                 hr_cs0 <= '1';
-                x2_hr_clk_phaseshift <= write_phase_shift;
+                x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
               else
                 x2_byte_phase <= x2_byte_phase + 1;
               end if;

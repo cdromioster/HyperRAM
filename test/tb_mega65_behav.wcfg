@@ -13,15 +13,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="149870000fs"></ZoomStartTime>
-      <ZoomEndTime time="151068001fs"></ZoomEndTime>
-      <Cursor1Time time="150120000fs"></Cursor1Time>
+      <ZoomStartTime time="0fs"></ZoomStartTime>
+      <ZoomEndTime time="181000001fs"></ZoomEndTime>
+      <Cursor1Time time="181000000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="235"></NameColumnWidth>
+      <NameColumnWidth column_width="230"></NameColumnWidth>
       <ValueColumnWidth column_width="79"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="16" />
+   <WVObjectSize size="20" />
    <wvobject type="logic" fp_name="/tb/stop_test">
       <obj_property name="ElementShortName">stop_test</obj_property>
       <obj_property name="ObjectShortName">stop_test</obj_property>
@@ -195,29 +195,21 @@
          <obj_property name="ElementShortName">busy</obj_property>
          <obj_property name="ObjectShortName">busy</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/queued2_write">
-         <obj_property name="ElementShortName">queued2_write</obj_property>
-         <obj_property name="ObjectShortName">queued2_write</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/queued_write">
-         <obj_property name="ElementShortName">queued_write</obj_property>
-         <obj_property name="ObjectShortName">queued_write</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect0_dispatchable">
-         <obj_property name="ElementShortName">write_collect0_dispatchable</obj_property>
-         <obj_property name="ObjectShortName">write_collect0_dispatchable</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect0_toolate">
-         <obj_property name="ElementShortName">write_collect0_toolate</obj_property>
-         <obj_property name="ObjectShortName">write_collect0_toolate</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect1_dispatchable">
-         <obj_property name="ElementShortName">write_collect1_dispatchable</obj_property>
-         <obj_property name="ObjectShortName">write_collect1_dispatchable</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/write_collect1_toolate">
-         <obj_property name="ElementShortName">write_collect1_toolate</obj_property>
-         <obj_property name="ObjectShortName">write_collect1_toolate</obj_property>
-      </wvobject>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clk_fast_current">
+      <obj_property name="ElementShortName">x4_hr_clk_fast_current</obj_property>
+      <obj_property name="ObjectShortName">x4_hr_clk_fast_current</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clk_phaseshift_current">
+      <obj_property name="ElementShortName">x4_hr_clk_phaseshift_current</obj_property>
+      <obj_property name="ObjectShortName">x4_hr_clk_phaseshift_current</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clock_phase">
+      <obj_property name="ElementShortName">x4_hr_clock_phase[2:0]</obj_property>
+      <obj_property name="ObjectShortName">x4_hr_clock_phase[2:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clock_phase_drive">
+      <obj_property name="ElementShortName">x4_hr_clock_phase_drive[2:0]</obj_property>
+      <obj_property name="ObjectShortName">x4_hr_clock_phase_drive[2:0]</obj_property>
    </wvobject>
 </wave_config>
