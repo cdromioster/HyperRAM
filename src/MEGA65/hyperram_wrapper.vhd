@@ -122,13 +122,7 @@ begin
       hr_reset                                    => hr_resetn_o,
       hr_clk_n                                    => open,
       hr_clk_p                                    => hr_ck_o,
-      hr2_d                                       => open,
-      hr2_rwds                                    => open,
-      hr2_reset                                   => open,
-      hr2_clk_n                                   => open,
-      hr2_clk_p                                   => open,
-      hr_cs0                                      => hr_csn_o,
-      hr_cs1                                      => open
+      hr_cs0                                      => hr_csn_o
    ); -- i_hyperram_mega65
 
 end architecture synthesis;
