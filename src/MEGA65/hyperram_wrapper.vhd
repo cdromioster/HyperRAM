@@ -46,6 +46,11 @@ architecture synthesis of hyperram_wrapper is
 
    signal wait_for_read     : std_logic;
 
+   signal hr_rwds_out       : std_logic;
+   signal hr_d_out          : unsigned(7 downto 0);
+   signal hr_rwds_oe        : std_logic;
+   signal hr_d_oe           : std_logic;
+
 begin
 
    rdata_16en <= '1';
@@ -110,12 +115,19 @@ begin
       rdata                                       => rdata,
       data_ready_strobe                           => data_ready_strobe,
       busy                                        => busy,
-      hr_d                                        => hr_dq_io,
-      hr_rwds                                     => hr_rwds_io,
+      hr_d_in                                     => hr_dq_io,
+      hr_rwds_in                                  => hr_rwds_io,
+      hr_d_out                                    => hr_d_out,
+      hr_rwds_out                                 => hr_rwds_out,
+      hr_d_oe                                     => hr_d_oe,
+      hr_rwds_oe                                  => hr_rwds_oe,
       hr_reset                                    => hr_resetn_o,
       hr_clk_p                                    => hr_ck_o,
       hr_cs0                                      => hr_csn_o
    ); -- i_hyperram_mega65
+
+   hr_dq_io <= hr_d_out when hr_d_oe = '1' else (others => 'Z');
+   hr_rwds_io <= hr_rwds_out when hr_rwds_oe = '1' else 'Z';
 
 end architecture synthesis;
 

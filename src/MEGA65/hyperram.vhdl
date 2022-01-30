@@ -25,8 +25,12 @@ entity hyperram_mega65 is
     data_ready_strobe : out   std_logic := '0';
     busy              : out   std_logic := '0';
 
-    hr_d              : inout unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
-    hr_rwds           : inout std_logic := 'Z'; -- RW Data strobe
+    hr_d_in           : in    unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
+    hr_rwds_in        : in    std_logic := 'Z'; -- RW Data strobe
+    hr_d_out          : out   unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
+    hr_rwds_out       : out   std_logic := 'Z'; -- RW Data strobe
+    hr_d_oe           : out   std_logic;
+    hr_rwds_oe        : out   std_logic;
     hr_reset          : out   std_logic := '1'; -- Active low RESET line to HyperRAM
     hr_clk_p          : out   std_logic := '1';
     hr_cs0            : out   std_logic := '1'
@@ -488,7 +492,7 @@ begin
           hr_cs0 <= '1';
           state <= Idle;
         when Idle =>
-          hr_d <= (others => 'Z');
+          hr_d_oe <= '0';
 
           x2_read_request_held <= '0';
           x2_write_request_held <= '0';
@@ -512,7 +516,8 @@ begin
 
           if x2_rwr_counter /= to_unsigned(0,8) then
             x2_rwr_counter <= x2_rwr_counter - 1;
-            hr_d <= x"bb";
+            hr_d_out <= x"bb";
+            hr_d_oe <= '1';
           end if;
           if x2_rwr_counter = to_unsigned(1,8) then
             x2_rwr_waiting <= '0';
@@ -668,7 +673,7 @@ begin
           report "x2_hr_command = $" & to_hstring(x2_hr_command);
           -- Call HyperRAM to attention
           hr_cs0 <= '0';
-          hr_rwds <= 'Z';
+          hr_rwds_oe <= '0';
 
           x2_pause_phase <= not x2_pause_phase;
 
@@ -730,7 +735,8 @@ begin
             report "Presenting x2_hr_command byte on hr_d = $" & to_hstring(x2_hr_command(47 downto 40))
               & ", x2_countdown = " & integer'image(x2_countdown);
 
-            hr_d <= x2_hr_command(47 downto 40);
+            hr_d_out <= x2_hr_command(47 downto 40);
+            hr_d_oe <= '1';
             x2_hr_command(47 downto 8) <= x2_hr_command(39 downto 0);
 
             -- Also shift out config register values, if required
@@ -752,8 +758,8 @@ begin
             end if;
 
             if x2_countdown = 3 and (x2_config_reg_write='0' or x2_ram_reading_held='1') then
-              x2_extra_latency <= hr_rwds;
-              if hr_rwds='1' then
+              x2_extra_latency <= hr_rwds_in;
+              if hr_rwds_in = '1' then
                 report "Applying extra latency";
               end if;
             end if;
@@ -834,8 +840,10 @@ begin
           else
             -- Begin write mask pre-amble
             if x2_ram_reading_held = '0' and x2_countdown = 2 then
-              hr_rwds <= '0';
-              hr_d <= x"BE"; -- "before" data byte
+              hr_rwds_out <= '0';
+              hr_rwds_oe <= '1';
+              hr_d_out <= x"BE"; -- "before" data byte
+              hr_d_oe <= '1';
             end if;
 
             if x2_countdown /= 0 then
@@ -858,7 +866,8 @@ begin
                   report "WRITE: Writing background byte $" & to_hstring(x2_background_write_data(0))
                     & ", valids= " & to_string(x2_background_write_valids)
                     & ", background words left = " & integer'image(x2_background_write_count);
-                  hr_d <= x2_background_write_data(0);
+                  hr_d_out <= x2_background_write_data(0);
+                  hr_d_oe <= '1';
 
                   x2_background_write_data(0) <= x2_background_write_data(1);
                   x2_background_write_data(1) <= x2_background_write_data(2);
@@ -869,15 +878,18 @@ begin
                   x2_background_write_data(6) <= x2_background_write_data(7);
                   x2_background_write_data(7) <= x"00";
 
-                  hr_rwds <= not x2_background_write_valids(0);
+                  hr_rwds_out <= not x2_background_write_valids(0);
+                  hr_rwds_oe <= '1';
                   x2_background_write_valids(0 to 6) <= x2_background_write_valids(1 to 7);
                   x2_background_write_valids(7) <= '0';
                 else
                   -- XXX Doesn't handle 16-bit writes properly. But that's
                   -- okay, as they are only supported with the cache and
                   -- write-collecting, anyway.
-                  hr_d <= (others => '0');
-                  hr_rwds <= x2_hyperram_access_address(0) xor x2_write_byte_phase;
+                  hr_d_out <= (others => '0');
+                  hr_d_oe <= '1';
+                  hr_rwds_out <= x2_hyperram_access_address(0) xor x2_write_byte_phase;
+                  hr_rwds_oe <= '1';
                 end if;
 
                 -- Finish resetting write collectors when chaining
@@ -890,7 +902,8 @@ begin
                 -- Write byte
                 x2_write_byte_phase <= '1';
                 if x2_background_write='0' then
-                  hr_d <= x"aa";
+                  hr_d_out <= x"aa";
+                  hr_d_oe <= '1';
                   if x2_background_write_count /= 0 then
                     x2_background_write_count <= x2_background_write_count - 1;
                   else
@@ -919,8 +932,9 @@ begin
         when HyperRAMFinishWriting =>
           -- Mask writing from here on.
           hr_cs0 <= '1';
-          hr_rwds <= 'Z';
-          hr_d <= x"FA"; -- "after" data byte
+          hr_rwds_oe <= '0';
+          hr_d_out <= x"FA"; -- "after" data byte
+          hr_d_oe <= '1';
           x2_hr_clk_phaseshift <= C_WRITE_PHASE_SHIFT;
           x2_rwr_counter <= C_RWR_DELAY;
           x2_rwr_waiting <= '1';
@@ -928,8 +942,8 @@ begin
           state <= Idle;
 
         when HyperRAMReadWaitSlow =>
-          hr_rwds <= 'Z';
-          hr_d <= (others => 'Z');
+          hr_rwds_oe <= '0';
+          hr_d_oe <= '0';
 
           x2_pause_phase <= not x2_pause_phase;
 
@@ -967,12 +981,12 @@ begin
             -- HyperRAM drives RWDS basically to follow the clock.
             -- But first valid data is when RWDS goes high, so we have to
             -- wait until we see it go high.
-            x2_hr_rwds_high_seen <= hr_rwds;
+            x2_hr_rwds_high_seen <= hr_rwds_in;
 
-            if hr_rwds='1' or x2_hr_rwds_high_seen='1' then
+            if hr_rwds_in = '1' or x2_hr_rwds_high_seen = '1' then
               if x2_byte_phase = x2_hyperram_access_address_read_time_adjusted then
-                report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d);
-                rdata <= hr_d;
+                report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d_in);
+                rdata <= hr_d_in;
                 if rdata_16en='0' then
                   report "asserting data_ready_strobe on low byte";
                   data_ready_strobe <= '1';
@@ -981,8 +995,8 @@ begin
               end if;
 
               if x2_byte_phase = (x2_hyperram_access_address_read_time_adjusted+1) and (rdata_16en='1') then
-                report "DISPATCH: Returning freshly read high-byte data = $" & to_hstring(hr_d);
-                rdata_hi <= hr_d;
+                report "DISPATCH: Returning freshly read high-byte data = $" & to_hstring(hr_d_in);
+                rdata_hi <= hr_d_in;
 
                 report "asserting data_ready_strobe on high byte";
                 data_ready_strobe <= '1';

@@ -14,14 +14,14 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="181000001fs"></ZoomEndTime>
-      <Cursor1Time time="181000000fs"></Cursor1Time>
+      <ZoomEndTime time="285577780fs"></ZoomEndTime>
+      <Cursor1Time time="1000000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="230"></NameColumnWidth>
+      <NameColumnWidth column_width="225"></NameColumnWidth>
       <ValueColumnWidth column_width="79"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="20" />
+   <WVObjectSize size="16" />
    <wvobject type="logic" fp_name="/tb/stop_test">
       <obj_property name="ElementShortName">stop_test</obj_property>
       <obj_property name="ObjectShortName">stop_test</obj_property>
@@ -57,7 +57,6 @@
    <wvobject type="group" fp_name="group30">
       <obj_property name="label">AVM</obj_property>
       <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
       <wvobject type="logic" fp_name="/tb/avm_write">
          <obj_property name="ElementShortName">avm_write</obj_property>
          <obj_property name="ObjectShortName">avm_write</obj_property>
@@ -195,21 +194,5 @@
          <obj_property name="ElementShortName">busy</obj_property>
          <obj_property name="ObjectShortName">busy</obj_property>
       </wvobject>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clk_fast_current">
-      <obj_property name="ElementShortName">x4_hr_clk_fast_current</obj_property>
-      <obj_property name="ObjectShortName">x4_hr_clk_fast_current</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clk_phaseshift_current">
-      <obj_property name="ElementShortName">x4_hr_clk_phaseshift_current</obj_property>
-      <obj_property name="ObjectShortName">x4_hr_clk_phaseshift_current</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clock_phase">
-      <obj_property name="ElementShortName">x4_hr_clock_phase[2:0]</obj_property>
-      <obj_property name="ObjectShortName">x4_hr_clock_phase[2:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x4_hr_clock_phase_drive">
-      <obj_property name="ElementShortName">x4_hr_clock_phase_drive[2:0]</obj_property>
-      <obj_property name="ObjectShortName">x4_hr_clock_phase_drive[2:0]</obj_property>
    </wvobject>
 </wave_config>
