@@ -35,12 +35,6 @@ entity hyperram_mega65 is
          data_ready_strobe : out std_logic := '0';
          busy : out std_logic := '0';
 
-         -- Export current cache line for speeding up reads from slow_devices controller
-         -- by skipping the need to hand us the request and get the response back.
-         current_cache_line : out cache_row_t := (others => (others => '0'));
-         current_cache_line_address : inout unsigned(26 downto 3) := (others => '0');
-         current_cache_line_valid : out std_logic := '0';
-
          hr_d : inout unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
          hr_rwds : inout std_logic := 'Z'; -- RW Data strobe
          hr_reset : out std_logic := '1'; -- Active low RESET line to HyperRAM
@@ -97,8 +91,6 @@ architecture gothic of hyperram_mega65 is
   constant ram_wdata_hi : unsigned(7 downto 0) := x"00";
   constant ram_wdata_enlo : std_logic := '0';
   constant ram_wdata_enhi : std_logic := '0';
-  constant current_cache_line_new_address : unsigned(26 downto 3) := (others => '0');
-  constant current_cache_line_update_all : std_logic := '0';
 
   signal x4_hr_clk_phaseshift_current : std_logic := '1';
   signal x4_hr_clk_fast_current : std_logic := '1';
@@ -108,8 +100,6 @@ architecture gothic of hyperram_mega65 is
   signal state : state_t := StartupDelay;
   signal x2_rwr_counter : unsigned(7 downto 0) := (others => '0');
   signal x2_rwr_waiting : std_logic := '0';
-  signal x2_current_cache_line_drive : cache_row_t := (others => (others => '0'));
-  signal x2_current_cache_line_address_drive : unsigned(26 downto 3) := (others => '0');
   signal x2_busy_internal : std_logic := '1';
   signal x2_hr_command : unsigned(47 downto 0);
 
@@ -120,7 +110,6 @@ architecture gothic of hyperram_mega65 is
   signal x2_ram_wdata_hi_drive : unsigned(7 downto 0) := x"00";
   signal x2_ram_wdata_enlo_drive : std_logic := '0';
   signal x2_ram_wdata_enhi_drive : std_logic := '0';
-  signal x2_ram_address_matches_current_cache_line_address : std_logic := '0';
 
   -- We want to set config register 0 to $ffe6, to enable variable latency
   -- and 3 cycles instead of 6 for latency. This speeds up writing almost 2x.
@@ -146,8 +135,6 @@ architecture gothic of hyperram_mega65 is
   signal x2_write_collect0_toolate : std_logic := '0'; -- Set when its too late to
   signal x2_write_collect0_flushed : std_logic := '1';
   signal x2_is_expected_to_respond : boolean := false;
-  signal x2_last_current_cache_line_update_all : std_logic := '0';
-  signal x2_last_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
   signal x2_hr_rwds_high_seen : std_logic := '0';
   signal x2_background_write : std_logic := '0';
   signal x2_background_write_valids : std_logic_vector(0 to 7) := x"00";
@@ -194,10 +181,6 @@ architecture gothic of hyperram_mega65 is
   signal x1_fake_data_ready_strobe : std_logic := '0';
   signal x1_request_counter_int : std_logic := '1';
   signal x1_write_blocked : std_logic := '0';
-  signal x1_current_cache_line_update : cache_row_t := (others => (others => '0'));
-  signal x1_current_cache_line_update_address : unsigned(26 downto 3) := (others => '0');
-  signal x1_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
-  signal x1_cache_row_update_address_changed : std_logic := '0';
   signal x1_read_request_latch : std_logic := '0';
   signal x1_write_request_latch : std_logic := '0';
 
@@ -222,8 +205,6 @@ begin
   begin
     if rising_edge(pixelclock) then
 
-      x1_cache_row_update_address_changed <= '0';
-
       if read_request='1' then
         x1_read_request_latch <= '1';
       end if;
@@ -232,28 +213,6 @@ begin
       end if;
       if x2_read_request_delatch = '1' then
         x1_read_request_latch <= '0';
-      end if;
-
-      -- Update short-circuit cache line
-      -- (We don't change validity, since we don't know if it is
-      -- valid or not).
-      -- This has to happen IMMEDIATELY so that slow_devices doesn't
-      -- accidentally read old data, while we are still scheduling the write.
-      if address(26 downto 3) = current_cache_line_address(26 downto 3) then
-        report "Requesting update of current_cache_line due to write. Value = $"
-          & to_hstring(wdata) & ", byte offset = " & integer'image(to_integer(address(2 downto 0)));
-        if wen_lo = '1' then
-          x1_current_cache_line_update(to_integer(address(2 downto 0))) <= wdata;
-          x1_current_cache_line_update_flags(to_integer(address(2 downto 0))) <=
-            not x1_current_cache_line_update_flags(to_integer(address(2 downto 0)));
-          x1_current_cache_line_update_address <= current_cache_line_address;
-          end if;
-        if wen_hi = '1' then
-          x1_current_cache_line_update(to_integer(address(2 downto 0))+1) <= wdata_hi;
-          x1_current_cache_line_update_flags(to_integer(address(2 downto 0))+1) <=
-            not x1_current_cache_line_update_flags(to_integer(address(2 downto 0))+1);
-          x1_current_cache_line_update_address <= current_cache_line_address;
-        end if;
       end if;
 
       -- With no cache, we have to IMMEDIATELY assert busy when we see a
@@ -428,10 +387,6 @@ begin
             x1_queued_write <= '1';
           end if;
         end if;
-
-        -- Update read cache structures when writing
-        report "CACHE: Requesting update of cache due to write: $" & to_hstring(address) & " = $" & to_hstring(wdata);
-        x1_cache_row_update_address_changed <= '1';
       end if;
     end if;
   end process;
@@ -527,34 +482,11 @@ begin
       x2_ram_wdata_enlo_drive <= ram_wdata_enlo;
       x2_ram_wdata_enhi_drive <= ram_wdata_enhi;
 
-      if x1_ram_address(26 downto 3) = current_cache_line_address(26 downto 3) then
-        x2_ram_address_matches_current_cache_line_address <= '1';
-      else
-        x2_ram_address_matches_current_cache_line_address <= '0';
-      end if;
       if x1_write_collect0_address = x2_background_write_next_address then
         x2_background_write_next_address_matches_collect0 <= '1';
       else
         x2_background_write_next_address_matches_collect0 <= '0';
       end if;
-
-
-      -- Update short-circuit cache line
-      -- (We don't change validity, since we don't know if it is
-      -- valid or not).
-      if x2_ram_address_matches_current_cache_line_address = '1' then
-        if x2_ram_wdata_enlo_drive='1' then
-          x2_current_cache_line_drive(to_integer(x2_hyperram_access_address(2 downto 0))) <= x2_ram_wdata_drive;
-        end if;
-        if x2_ram_wdata_enhi_drive='1' then
-          x2_current_cache_line_drive(to_integer(x2_hyperram_access_address(2 downto 0))+1) <= x2_ram_wdata_hi_drive;
-        end if;
-      end if;
-
-
-      current_cache_line <= x2_current_cache_line_drive;
-      current_cache_line_address <= x2_current_cache_line_address_drive;
-      current_cache_line_valid <= '0';
 
       if x2_data_ready_strobe_hold = '0' then
         if x1_fake_data_ready_strobe='1' then
@@ -580,25 +512,6 @@ begin
       if conf_buf1_set /= x2_last_conf_buf1_set then
         x2_last_conf_buf1_set <= conf_buf1_set;
         x2_conf_buf1 <= conf_buf1_in;
-      end if;
-
-      if current_cache_line_update_all = x2_last_current_cache_line_update_all then
-        if x1_current_cache_line_update_address = x2_current_cache_line_address_drive then
-          for i in 0 to 7 loop
-            if x1_current_cache_line_update_flags(i) /= x2_last_current_cache_line_update_flags(i)  then
-              report "CACHE: Driving update to current_cache_line byte " & integer'image(i)
-                & ", value $" & to_hstring(x1_current_cache_line_update(i));
-              x2_last_current_cache_line_update_flags(i) <= x1_current_cache_line_update_flags(i);
-              x2_current_cache_line_drive(i) <= x1_current_cache_line_update(i);
-            end if;
-          end loop;
-        end if;
-      else
-        report "DISPATCHER: Replacing current cache line with $" & to_hstring(current_cache_line_new_address&"000");
-        x2_last_current_cache_line_update_all <= current_cache_line_update_all;
-        x2_current_cache_line_address_drive <= current_cache_line_new_address;
-        x2_current_cache_line_drive <= x1_current_cache_line_update;
-        x2_last_current_cache_line_update_flags <= x1_current_cache_line_update_flags;
       end if;
 
       -- Keep read request when required
