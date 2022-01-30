@@ -6,7 +6,6 @@ use Std.TextIO.all;
 use work.cputypes.all;
 
 entity hyperram_mega65 is
-  generic ( in_simulation : in boolean := false);
   Port ( pixelclock : in STD_LOGIC; -- For slow devices bus interface is
          -- actually on pixelclock to reduce latencies
          -- Also pixelclock is the natural clock speed we apply to the HyperRAM.
@@ -43,12 +42,10 @@ entity hyperram_mega65 is
          current_cache_line : out cache_row_t := (others => (others => '0'));
          current_cache_line_address : inout unsigned(26 downto 3) := (others => '0');
          current_cache_line_valid : out std_logic := '0';
-         expansionram_current_cache_line_next_toggle : in std_logic := '0';
 
          hr_d : inout unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
          hr_rwds : inout std_logic := 'Z'; -- RW Data strobe
          hr_reset : out std_logic := '1'; -- Active low RESET line to HyperRAM
-         hr_clk_n : out std_logic := '0';
          hr_clk_p : out std_logic := '1';
 
          hr_cs0 : out std_logic := '1'
@@ -63,7 +60,6 @@ architecture gothic of hyperram_mega65 is
     Idle,
     ReadSetup,
     WriteSetup,
-    HyperRAMOutputCommand,
     HyperRAMOutputCommandSlow,
     StartBackgroundWrite,
     HyperRAMDoWriteSlow,
@@ -97,12 +93,7 @@ architecture gothic of hyperram_mega65 is
   signal state : state_t := StartupDelay;
   signal busy_internal : std_logic := '1';
   signal hr_command : unsigned(47 downto 0);
-
   signal hr_d_last : unsigned(7 downto 0);
-
-  -- Used to assert CS line on BOTH hyperRAM modules at the same time
-  -- when doing the initial configuration register write.
-  signal first_transaction : std_logic := '1';
 
   -- Initial transaction is config register write
   signal config_reg_write : std_logic := '1';
@@ -122,8 +113,6 @@ architecture gothic of hyperram_mega65 is
   signal ram_wdata_hi_drive : unsigned(7 downto 0) := x"00";
   signal ram_wdata_enlo_drive : std_logic := '0';
   signal ram_wdata_enhi_drive : std_logic := '0';
-  signal cache_row0_address_matches_ram_address : std_logic := '0';
-  signal cache_row1_address_matches_ram_address : std_logic := '0';
   signal ram_address_matches_current_cache_line_address : std_logic := '0';
   signal address_matches_hyperram_access_address_block : std_logic := '0';
 
@@ -148,13 +137,6 @@ architecture gothic of hyperram_mega65 is
   signal write_latency : unsigned(7 downto 0) := to_unsigned(5,8);
   -- And the matching extra latency is 5
   signal extra_write_latency : unsigned(7 downto 0) := to_unsigned(7,8);
-
-  -- And for the 2nd trap-door hyperram.
-  -- That module from 1BitSquared uses a different brand of hyperram
-  -- and seems to have different timing.
-  signal write_latency2 : unsigned(7 downto 0) := to_unsigned(3,8);
-  signal extra_write_latency2 : unsigned(7 downto 0) := to_unsigned(1,8);
-
 
   signal flag_prefetch : std_logic := '1';  -- enable/disable prefetch of read
                                             -- blocks
@@ -190,17 +172,6 @@ architecture gothic of hyperram_mega65 is
 
   signal cycle_count : integer := 0;
 
-  -- Have a tiny little cache to reduce latency
-  -- 8 byte cache rows, where we indicate the validity of
-  -- each byte.
-  signal cache_row0_valids : std_logic_vector(0 to 7) := (others => '0');
-  signal cache_row0_address : unsigned(23 downto 0) := (others => '1');
-  signal cache_row0_data : cache_row_t := ( others => x"00" );
-
-  signal cache_row1_valids : std_logic_vector(0 to 7) := (others => '0');
-  signal cache_row1_address : unsigned(23 downto 0) := (others => '1');
-  signal cache_row1_data : cache_row_t := ( others => x"00" );
-
   -- Collect writes together to hide write latency
   signal write_collect0_dispatchable : std_logic := '0';
   signal write_collect0_address : unsigned(26 downto 3) := (others => '0');
@@ -222,9 +193,6 @@ architecture gothic of hyperram_mega65 is
   signal last_current_cache_line_update_all : std_logic := '0';
   signal last_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
 
-  signal hyperram_access_address_matches_cache_row0 : std_logic := '0';
-  signal hyperram_access_address_matches_cache_row1 : std_logic := '0';
-
   signal cache_row_update_address : unsigned(26 downto 3) := (others => '0');
   signal cache_row_update_byte : integer range 0 to 7 := 0;
   signal cache_row_update_value : unsigned(7 downto 0) := x"00";
@@ -243,8 +211,6 @@ architecture gothic of hyperram_mega65 is
 
   signal hr_rwds_high_seen : std_logic := '0';
 
-  signal random_bits : unsigned(7 downto 0) := x"00";
-
   signal write_blocked : std_logic := '0';
 
   signal background_write : std_logic := '0';
@@ -257,8 +223,6 @@ architecture gothic of hyperram_mega65 is
   signal background_write_fetch : std_logic := '0';
   signal matches_cache_row_update_address : std_logic := '0';
   signal cache_row_update_address_changed : std_logic := '0';
-  signal cache_row0_address_matches_cache_row_update_address : std_logic := '0';
-  signal cache_row1_address_matches_cache_row_update_address : std_logic := '0';
   signal byte_phase_greater_than_address_low_bits : std_logic := '0';
   signal byte_phase_greater_than_address_end_of_row : std_logic := '0';
 
@@ -337,11 +301,6 @@ begin
         read_request_latch <= '0';
       end if;
 
-      if in_simulation = true then
-        write_latency2 <= to_unsigned(5,8);
-        extra_write_latency2 <= to_unsigned(3,8);
-      end if;
-
       report "read_request=" & std_logic'image(read_request)
         & ", read_request_held=" & std_logic'image(read_request_held)
         & ", write_request_held=" & std_logic'image(write_request_held)
@@ -351,13 +310,6 @@ begin
         & ", write_request=" & std_logic'image(write_request)
         & ", request_toggle(last) = " & std_logic'image(request_toggle) & "(" & std_logic'image(last_request_toggle) & ")."
         & ", address=$" & to_hstring(address);
-
-      -- Pseudo random bits so that we can do randomised cache row replacement
-      if random_bits /= to_unsigned(251,8) then
-        random_bits <= random_bits + 1;
-      else
-        random_bits <= x"00";
-      end if;
 
       -- Update short-circuit cache line
       -- (We don't change validity, since we don't know if it is
@@ -594,46 +546,46 @@ begin
       report "clock phase vector = " & to_string(std_logic_vector(clock_status_vector));
       case clock_status_vector is
         -- Slow clock rate, no phase shift
-        when "00000" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "00001" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "00010" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "00011" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "00100" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "00101" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "00110" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "00111" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
+        when "00000" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "00001" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "00010" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "00011" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "00100" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "00101" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "00110" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "00111" => hr_clk <= '1'; hr_clk_p <= '1';
 
         -- Slow clock rate, with phase shift = bring forward tick by 1/2 a cycle
-        when "01000" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "01001" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "01010" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "01011" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "01100" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "01101" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "01110" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "01111" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
+        when "01000" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "01001" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "01010" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "01011" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "01100" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "01101" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "01110" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "01111" => hr_clk <= '0'; hr_clk_p <= '0';
 
         -- Fast clock rate, no phase shift
-        when "10000" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "10001" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "10010" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "10011" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "10100" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "10101" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "10110" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "10111" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
+        when "10000" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "10001" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "10010" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "10011" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "10100" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "10101" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "10110" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "10111" => hr_clk <= '1'; hr_clk_p <= '1';
 
         -- Fast clock rate, with phase shift
-        when "11000" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "11001" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "11010" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "11011" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "11100" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
-        when "11101" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "11110" => hr_clk <= '1'; hr_clk_p <= '1'; hr_clk_n <= '0';
-        when "11111" => hr_clk <= '0'; hr_clk_p <= '0'; hr_clk_n <= '1';
+        when "11000" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "11001" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "11010" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "11011" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "11100" => hr_clk <= '0'; hr_clk_p <= '0';
+        when "11101" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "11110" => hr_clk <= '1'; hr_clk_p <= '1';
+        when "11111" => hr_clk <= '0'; hr_clk_p <= '0';
 
-        when others => hr_clk <= '0';  hr_clk_p <= '0'; hr_clk_n <= '1';
+        when others => hr_clk <= '0';  hr_clk_p <= '0';
       end case;
     end if;
   end process;
@@ -667,16 +619,6 @@ begin
         ram_address_matches_current_cache_line_address <= '1';
       else
         ram_address_matches_current_cache_line_address <= '0';
-      end if;
-      if cache_row0_address = ram_address(26 downto 3) then
-        cache_row0_address_matches_ram_address <= '1';
-      else
-        cache_row0_address_matches_ram_address <= '0';
-      end if;
-      if cache_row1_address = ram_address(26 downto 3) then
-        cache_row1_address_matches_ram_address <= '1';
-      else
-        cache_row1_address_matches_ram_address <= '0';
       end if;
       if write_collect0_address = background_write_next_address then
         background_write_next_address_matches_collect0 <= '1';
@@ -725,27 +667,6 @@ begin
         end if;
       end if;
 
-      if cache_row0_address = hyperram_access_address(26 downto 3) then
-        hyperram_access_address_matches_cache_row0 <= '1';
-      else
-        hyperram_access_address_matches_cache_row0 <= '0';
-      end if;
-      if cache_row1_address = hyperram_access_address(26 downto 3) then
-        hyperram_access_address_matches_cache_row1 <= '1';
-      else
-        hyperram_access_address_matches_cache_row1 <= '0';
-      end if;
-      if cache_row0_address = cache_row_update_address then
-        cache_row0_address_matches_cache_row_update_address <= '1';
-      else
-        cache_row0_address_matches_cache_row_update_address <= '0';
-      end if;
-      if cache_row1_address = cache_row_update_address then
-        cache_row1_address_matches_cache_row_update_address <= '1';
-      else
-        cache_row1_address_matches_cache_row_update_address <= '0';
-      end if;
-
 
       current_cache_line <= current_cache_line_drive;
       current_cache_line_address <= current_cache_line_address_drive;
@@ -783,9 +704,6 @@ begin
 
 
       -- Invalidate cache
-      report "Zeroing cache_row0_valids";
-      cache_row0_valids <= (others => '0');
-      cache_row1_valids <= (others => '0');
       current_cache_line_valid_drive <= '0';
 
       if current_cache_line_update_all = last_current_cache_line_update_all then
@@ -836,7 +754,6 @@ begin
 
           busy_internal <= '0';
 
-          first_transaction <= '0';
           is_expected_to_respond <= ram_normalfetch;
 
           -- All commands need the clock offset by 1/2 cycle
@@ -887,7 +804,6 @@ begin
                 busy_internal <= '1';
               else
                 report "Waiting to start write";
-                report "Setting state to WriteSetup. random_bits=" & to_hstring(random_bits);
                 request_accepted <= request_toggle;
                 last_request_toggle <= request_toggle;
                 state <= WriteSetup;
@@ -1160,171 +1076,8 @@ begin
           byte_phase <= to_unsigned(0,6);
           write_byte_phase <= '0';
 
-        when HyperRAMOutputCommand =>
-          report "Writing command";
-          -- Call HyperRAM to attention
-          hr_cs0 <= '0';
-
-          hr_rwds <= 'Z';
-
-          hr_clk_phaseshift <= write_byte_phase;
-
-          pause_phase <= not pause_phase;
-
-          hr_clk_phaseshift <= write_phase_shift;
-
-          if countdown_timeout='1' then
-            -- Finished shifting out
-            if ram_reading_held = '1' then
-              -- Reading: We can just wait until hr_rwds has gone low, and then
-              -- goes high again to indicate the first data byte
-              countdown <= 63;
-              countdown_is_zero <= '0';
-              hr_rwds_high_seen <= '0';
-              countdown_timeout <= '0';
-              pause_phase <= '1';
-              hr_clk_fast <= '0';
-              state <= HyperRAMReadWaitSlow;
-            elsif config_reg_write='1' and ram_reading_held='0' then
-              -- Config register write.
-              -- These are a bit weird, as they have no latency, and all 16
-              -- bits have to get written at once.  So we will have 2 buffer
-              -- registers that get setup, and then ANY write to the register
-              -- area will write those values, which we have done by shifting
-              -- those through and sending 48+16 bits instead of the usual
-              -- 48.
-              if background_write='1' then
-                write_collect0_flushed <= '1';
-              end if;
-
-              report "Finished writing config register";
-              state <= HyperRAMFinishWriting;
-            else
-              -- Writing to memory, so count down the correct number of cycles;
-              -- Initial latency is reduced by 2 cycles for the last bytes
-              -- of the access command, and by 1 more to cover state
-              -- machine latency
-              countdown <= to_integer(write_latency);
-              -- XXX Doesn't work if write_latency(2) is $00
-              countdown_is_zero <= '0';
-
-
-              -- We are not just about ready to start writing, so mark the
-              -- write buffer as too late to be added to, because we will
-              -- snap-shot it in a moment.
-              if background_write = '1' then
-                background_write_count <= 4 + 2;
-                -- We know we can do upto 128 bytes at least per write,
-                -- before a refresh is required. So allow 16x8 byte writes to
-                -- be chained.
-                write_continues <= write_continues_max;
-                write_collect0_toolate <= '1';
-                write_collect0_flushed <= '0';
-              end if;
-              countdown_timeout <= '0';
-              hr_clk_fast <= '0';
-              state <= HyperRAMDoWriteSlow;
-            end if;
-          end if;
-
-          -- In fast mode, we can't toggle data while the clock is steady
-          -- as we toggle it every cycle
-          report "Presenting hr_command byte on hr_d = $" & to_hstring(hr_command(47 downto 40))
-            & ", clock = " & std_logic'image(hr_clk)
-            & ", countdown = " & integer'image(countdown);
-
-          hr_d <= hr_command(47 downto 40);
-          hr_command(47 downto 8) <= hr_command(39 downto 0);
-
-          -- Also shift out config register values, if required
-          if config_reg_write='1' and ram_reading_held='0' then
-            report "shifting in conf value $" & to_hstring(conf_buf0);
-            hr_command(7 downto 0) <= conf_buf0;
-            conf_buf0 <= conf_buf1;
-            conf_buf1 <= conf_buf0;
-          else
-            hr_command(7 downto 0) <= x"00";
-          end if;
-
-          report "Writing command byte $" & to_hstring(hr_command(47 downto 40));
-
-          if countdown = 3 and config_reg_write='1' then
-            if background_write='1' then
-              write_collect0_toolate <= '1';
-            end if;
-          end if;
-
-          if countdown = 3 and (config_reg_write='0' or ram_reading_held='1') then
-            extra_latency <= hr_rwds;
-            if (hr_rwds='1')
-            then
-              report "Applying extra latency";
-            end if;
-          end if;
-          if countdown = 1 then
-            countdown_is_zero <= '1';
-          end if;
-          if countdown /= 0 then
-            countdown <= countdown - 1;
-          else
-            report "asserting countdown_timeout";
-            countdown_timeout <= '1';
-          end if;
-          byte_phase <= to_unsigned(0,6);
-          write_byte_phase <= '0';
-
-
         when HyperRAMDoWriteSlow =>
           pause_phase <= not pause_phase;
-
-          -- Update cache
-          if cache_row0_address_matches_ram_address = '1' then
-            if ram_wdata_enlo_drive='1' then
-              cache_row0_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-              cache_row0_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-            end if;
-            if ram_wdata_enhi_drive='1' then
-              cache_row0_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-              cache_row0_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-            end if;
-          elsif cache_row1_address_matches_ram_address='1' then
-            if ram_wdata_enlo_drive='1' then
-              cache_row1_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-              cache_row1_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-            end if;
-            if ram_wdata_enhi_drive='1' then
-              cache_row1_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-              cache_row1_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-            end if;
-          else
-            if random_bits(1)='0' then
-              report "Zeroing cache_row0_valids";
-              cache_row0_valids <= (others => '0');
-              cache_row0_address <= ram_address_drive(26 downto 3);
-              cache_row0_address_matches_ram_address <= '1';
-              if ram_wdata_enlo_drive='1' then
-                cache_row0_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-                cache_row0_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-              end if;
-              if ram_wdata_enhi_drive='1' then
-                cache_row0_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-                cache_row0_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-              end if;
-            else
-              report "Zeroing cache_row1_valids";
-              cache_row1_valids <= (others => '0');
-              cache_row1_address <= ram_address_drive(26 downto 3);
-              cache_row1_address_matches_ram_address <= '1';
-              if ram_wdata_enlo_drive='1' then
-                cache_row1_valids(to_integer(ram_address_drive(2 downto 0))) <= '1';
-                cache_row1_data(to_integer(ram_address_drive(2 downto 0))) <= ram_wdata_drive;
-              end if;
-              if ram_wdata_enhi_drive='1' then
-                cache_row1_valids(to_integer(ram_address_drive(2 downto 0))+1) <= '1';
-                cache_row1_data(to_integer(ram_address_drive(2 downto 0))+1) <= ram_wdata_hi_drive;
-              end if;
-            end if;
-          end if;
 
           -- Fetch takes 2 cycles, so schedule one cycle before last read
           -- and shift, so that it happens after that last shift, but
@@ -1586,40 +1339,6 @@ begin
               -- Data has arrived: Latch either odd or even byte
               -- as required.
 --                  report "DISPATCH Saw read data = $" & to_hstring(hr_d);
-
-              -- Update cache
-              if byte_phase < 8 then
-                -- Store the bytes in the cache row
-                if hyperram_access_address_matches_cache_row0 = '1' then
-                  cache_row0_valids(to_integer(byte_phase)) <= '1';
-                  report "hr_sample='1'";
-                  report "hr_sample='0'";
-                  cache_row0_data(to_integer(byte_phase)) <= hr_d;
-                elsif hyperram_access_address_matches_cache_row1 = '1' then
-                  cache_row1_valids(to_integer(byte_phase)) <= '1';
-                  report "hr_sample='1'";
-                  report "hr_sample='0'";
-                  cache_row1_data(to_integer(byte_phase)) <= hr_d;
-                elsif random_bits(1) = '0' then
-                  report "Zeroing cache_row0_valids";
-                  cache_row0_valids <= (others => '0');
-                  cache_row0_address <= hyperram_access_address(26 downto 3);
-                  hyperram_access_address_matches_cache_row0 <= '1';
-                  cache_row0_valids(to_integer(byte_phase)) <= '1';
-                  report "hr_sample='1'";
-                  report "hr_sample='0'";
-                  cache_row0_data(to_integer(byte_phase)) <= hr_d;
-                else
-                  report "Zeroing cache_row1_valids";
-                  cache_row1_valids <= (others => '0');
-                  cache_row1_address <= hyperram_access_address(26 downto 3);
-                  hyperram_access_address_matches_cache_row1 <= '1';
-                  cache_row1_valids(to_integer(byte_phase)) <= '1';
-                  report "hr_sample='1'";
-                  report "hr_sample='0'";
-                  cache_row1_data(to_integer(byte_phase)) <= hr_d;
-                end if;
-              end if;
 
               -- Quickly return the correct byte
               if byte_phase = hyperram_access_address_read_time_adjusted then

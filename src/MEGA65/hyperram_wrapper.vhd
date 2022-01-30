@@ -93,9 +93,6 @@ begin
 
 
    i_hyperram_mega65 : entity work.hyperram_mega65
-   generic map (
-      in_simulation => false
-   )
    port map (
       pixelclock                                  => clk_i,
       clock163                                    => clk_x2_i,
@@ -116,11 +113,9 @@ begin
       current_cache_line                          => open,
       current_cache_line_address                  => open,
       current_cache_line_valid                    => open,
-      expansionram_current_cache_line_next_toggle => '0',
       hr_d                                        => hr_dq_io,
       hr_rwds                                     => hr_rwds_io,
       hr_reset                                    => hr_resetn_o,
-      hr_clk_n                                    => open,
       hr_clk_p                                    => hr_ck_o,
       hr_cs0                                      => hr_csn_o
    ); -- i_hyperram_mega65
