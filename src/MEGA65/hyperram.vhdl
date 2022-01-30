@@ -6,44 +6,34 @@ use Std.TextIO.all;
 use work.cputypes.all;
 
 entity hyperram_mega65 is
-  Port ( pixelclock : in STD_LOGIC; -- For slow devices bus interface is
-         -- actually on pixelclock to reduce latencies
-         -- Also pixelclock is the natural clock speed we apply to the HyperRAM.
-         clock163 : in std_logic; -- Used for fast clock for HyperRAM
-         clock325 : in std_logic; -- Used for fast clock for HyperRAM SERDES units
+  port (
+    pixelclock        : in    std_logic; -- for slow devices bus interface is
+    clock163          : in    std_logic; -- Used for fast clock for HyperRAM
+    clock325          : in    std_logic; -- Used for fast clock for HyperRAM SERDES units
 
-         -- Simple counter for number of requests received
-         request_counter : out std_logic := '0';
+    request_counter   : out   std_logic := '0';
+    read_request      : in    std_logic;
+    write_request     : in    std_logic;
+    address           : in    unsigned(26 downto 0);
+    wdata             : in    unsigned(7 downto 0);
+    wdata_hi          : in    unsigned(7 downto 0);
+    wen_hi            : in    std_logic;
+    wen_lo            : in    std_logic;
+    rdata_hi          : out   unsigned(7 downto 0);
+    rdata_16en        : in    std_logic;         -- set this high to be able to read 16-bit values
+    rdata             : out   unsigned(7 downto 0);
+    data_ready_strobe : out   std_logic := '0';
+    busy              : out   std_logic := '0';
 
-         read_request : in std_logic;
-         write_request : in std_logic;
-         address : in unsigned(26 downto 0);
-         wdata : in unsigned(7 downto 0);
+    hr_d              : inout unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
+    hr_rwds           : inout std_logic := 'Z'; -- RW Data strobe
+    hr_reset          : out   std_logic := '1'; -- Active low RESET line to HyperRAM
+    hr_clk_p          : out   std_logic := '1';
+    hr_cs0            : out   std_logic := '1'
+  );
+end entity hyperram_mega65;
 
-         -- Optional 16-bit interface (for Amiga core use)
-         -- (That it is optional, is why the write_en is inverted for the
-         -- low-byte).
-         -- 16-bit transactions MUST occur on an even numbered address, or
-         -- else expect odd and horrible things to happen.
-         wdata_hi : in unsigned(7 downto 0) := x"00";
-         wen_hi : in std_logic := '0';
-         wen_lo : in std_logic := '1';
-         rdata_hi : out unsigned(7 downto 0);
-         rdata_16en : in std_logic := '0';         -- set this high to be able
-                                                   -- to read 16-bit values
-         rdata : out unsigned(7 downto 0);
-         data_ready_strobe : out std_logic := '0';
-         busy : out std_logic := '0';
-
-         hr_d : inout unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
-         hr_rwds : inout std_logic := 'Z'; -- RW Data strobe
-         hr_reset : out std_logic := '1'; -- Active low RESET line to HyperRAM
-         hr_clk_p : out std_logic := '1';
-         hr_cs0 : out std_logic := '1'
-         );
-end hyperram_mega65;
-
-architecture gothic of hyperram_mega65 is
+architecture synthesis of hyperram_mega65 is
 
   type state_t is (
     StartupDelay,
@@ -56,7 +46,7 @@ architecture gothic of hyperram_mega65 is
     HyperRAMDoWriteSlow,
     HyperRAMFinishWriting,
     HyperRAMReadWaitSlow
-    );
+  );
 
   -- How many clock ticks need to expire between transactions to satisfy T_RWR
   -- of hyperrram for the T_RWR 40ns delay.
@@ -79,23 +69,12 @@ architecture gothic of hyperram_mega65 is
   constant extra_write_latency : unsigned(7 downto 0) := to_unsigned(7,8);
   constant read_phase_shift : std_logic := '0';
   constant write_phase_shift : std_logic := '1';
-  constant fake_rdata : unsigned(7 downto 0) := x"00";
-  constant fake_rdata_hi : unsigned(7 downto 0) := x"00";
-  constant conf_buf0_in : unsigned(7 downto 0) := x"ff";
-  constant conf_buf1_in : unsigned(7 downto 0) := x"f6";
-  constant conf_buf0_set : std_logic := '0';
-  constant conf_buf1_set : std_logic := '0';
   constant write_continues_max : integer range 0 to 255 := 16;
   constant read_time_adjust : integer range 0 to 255 := 0;
-  constant ram_wdata : unsigned(7 downto 0) := x"00";
-  constant ram_wdata_hi : unsigned(7 downto 0) := x"00";
-  constant ram_wdata_enlo : std_logic := '0';
-  constant ram_wdata_enhi : std_logic := '0';
 
   signal x4_hr_clk_phaseshift_current : std_logic := '1';
   signal x4_hr_clk_fast_current : std_logic := '1';
   signal x4_hr_clock_phase : unsigned(2 downto 0) := "000";
-  signal x4_hr_clock_phase_drive : unsigned(2 downto 0) := "111";
 
   signal state : state_t := StartupDelay;
   signal x2_rwr_counter : unsigned(7 downto 0) := (others => '0');
@@ -106,10 +85,6 @@ architecture gothic of hyperram_mega65 is
   -- Initial transaction is config register write
   signal x2_config_reg_write : std_logic := '1';
   signal x2_ram_reading_held : std_logic := '0';
-  signal x2_ram_wdata_drive : unsigned(7 downto 0) := x"00";
-  signal x2_ram_wdata_hi_drive : unsigned(7 downto 0) := x"00";
-  signal x2_ram_wdata_enlo_drive : std_logic := '0';
-  signal x2_ram_wdata_enhi_drive : std_logic := '0';
 
   -- We want to set config register 0 to $ffe6, to enable variable latency
   -- and 3 cycles instead of 6 for latency. This speeds up writing almost 2x.
@@ -119,8 +94,6 @@ architecture gothic of hyperram_mega65 is
   -- clock transitions. This fixes checkerboard read errors at 80MHz.
   signal x2_conf_buf0 : unsigned(7 downto 0) := x"ff";
   signal x2_conf_buf1 : unsigned(7 downto 0) := x"f6";
-  signal x2_last_conf_buf0_set : std_logic := '0';
-  signal x2_last_conf_buf1_set : std_logic := '0';
   signal x2_countdown : integer range 0 to 63 := 0;
   signal x2_countdown_is_zero : std_logic := '1';
   signal x2_extra_latency : std_logic := '0';
@@ -397,11 +370,10 @@ begin
     -- Optionally delay HR_CLK by 1/2 an 160MHz clock cycle
     -- (actually just by optionally inverting it)
     if rising_edge(clock325) then
-      x4_hr_clock_phase_drive <= x4_hr_clock_phase;
       x4_hr_clock_phase <= x4_hr_clock_phase + 1;
       -- Changing at the end of a phase cycle prevents us having any
       -- problematically short clock pulses when it matters.
-      if x4_hr_clock_phase_drive="110" then
+      if x4_hr_clock_phase="111" then
         x4_hr_clk_fast_current <= x2_hr_clk_fast;
         x4_hr_clk_phaseshift_current <= x2_hr_clk_phaseshift;
         if x2_hr_clk_fast /= x4_hr_clk_fast_current or x4_hr_clk_phaseshift_current /= x2_hr_clk_phaseshift then
@@ -474,14 +446,6 @@ begin
       x2_hyperram_access_address_read_time_adjusted <= to_unsigned(to_integer(x2_hyperram_access_address(2 downto 0))+read_time_adjust,6);
       x2_seven_plus_read_time_adjust <= to_unsigned(7 + read_time_adjust,6);
 
-      -- We run double the clock speed of the pixelclock area, so no request
-      -- can come in during the extra drive cycle we use to update these values
-      -- so as to improve the timing closure of the whole thing
-      x2_ram_wdata_drive <= ram_wdata;
-      x2_ram_wdata_hi_drive <= ram_wdata_hi;
-      x2_ram_wdata_enlo_drive <= ram_wdata_enlo;
-      x2_ram_wdata_enhi_drive <= ram_wdata_enhi;
-
       if x1_write_collect0_address = x2_background_write_next_address then
         x2_background_write_next_address_matches_collect0 <= '1';
       else
@@ -494,9 +458,8 @@ begin
         end if;
         data_ready_strobe <= x1_fake_data_ready_strobe;
         if x1_fake_data_ready_strobe='1' then
-          report "DISPATCH: holding data_ready_strobe via fake data = $" & to_hstring(fake_rdata);
-          rdata <= fake_rdata;
-          rdata_hi <= fake_rdata_hi;
+          rdata    <= (others => '0');
+          rdata_hi <= (others => '0');
         end if;
       else
         report "holding data_ready_strobe for an extra cycle";
@@ -504,15 +467,6 @@ begin
         data_ready_strobe <= '1';
       end if;
       x2_data_ready_strobe_hold <= '0';
-
-      if conf_buf0_set /= x2_last_conf_buf0_set then
-        x2_last_conf_buf0_set <= conf_buf0_set;
-        x2_conf_buf0 <= conf_buf0_in;
-      end if;
-      if conf_buf1_set /= x2_last_conf_buf1_set then
-        x2_last_conf_buf1_set <= conf_buf1_set;
-        x2_conf_buf1 <= conf_buf1_in;
-      end if;
 
       -- Keep read request when required
       x2_read_request_held <= read_request;
@@ -993,7 +947,7 @@ begin
                   -- XXX Doesn't handle 16-bit writes properly. But that's
                   -- okay, as they are only supported with the cache and
                   -- write-collecting, anyway.
-                  hr_d <= ram_wdata;
+                  hr_d <= (others => '0');
                   hr_rwds <= x2_hyperram_access_address(0) xor x2_write_byte_phase;
                 end if;
 
@@ -1147,6 +1101,5 @@ begin
       end case;
     end if;
   end process;
-end gothic;
-
+end architecture synthesis;
 
