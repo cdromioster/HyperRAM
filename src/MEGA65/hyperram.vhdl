@@ -78,27 +78,44 @@ architecture gothic of hyperram_mega65 is
   -- Actually, all of that is a bit moot, since it seems that we just have to apply
   -- some trial and error to get it right. 1 seems right with the current settings.
   constant rwr_delay : unsigned(7 downto 0) := to_unsigned(1,8);
-  signal x2_rwr_counter : unsigned(7 downto 0) := (others => '0');
-  signal x2_rwr_waiting : std_logic := '0';
-
-  signal x2_current_cache_line_drive : cache_row_t := (others => (others => '0'));
-  signal x2_current_cache_line_address_drive : unsigned(26 downto 3) := (others => '0');
-
-  signal state : state_t := StartupDelay;
-  signal x2_busy_internal : std_logic := '1';
-  signal hr_command : unsigned(47 downto 0);
-
-  -- Initial transaction is config register write
-  signal x2_config_reg_write : std_logic := '1';
-  signal x1_ram_address : unsigned(26 downto 0) :=
-    "010000000000001000000000000"; -- = bottom 27 bits of x"A001000";
+  -- 4 is correct for the part we have in the MEGA65, after we have set the
+  -- config register to minimise latency.
+  constant write_latency : unsigned(7 downto 0) := to_unsigned(5,8);
+  -- And the matching extra latency is 5
+  constant extra_write_latency : unsigned(7 downto 0) := to_unsigned(7,8);
+  constant read_phase_shift : std_logic := '0';
+  constant write_phase_shift : std_logic := '1';
+  constant fake_rdata : unsigned(7 downto 0) := x"00";
+  constant fake_rdata_hi : unsigned(7 downto 0) := x"00";
+  constant conf_buf0_in : unsigned(7 downto 0) := x"ff";
+  constant conf_buf1_in : unsigned(7 downto 0) := x"f6";
+  constant conf_buf0_set : std_logic := '0';
+  constant conf_buf1_set : std_logic := '0';
+  constant write_continues_max : integer range 0 to 255 := 16;
+  constant read_time_adjust : integer range 0 to 255 := 0;
   constant ram_wdata : unsigned(7 downto 0) := x"00";
   constant ram_wdata_hi : unsigned(7 downto 0) := x"00";
   constant ram_wdata_enlo : std_logic := '0';
   constant ram_wdata_enhi : std_logic := '0';
-  signal x1_ram_reading : std_logic := '0';
-  signal x2_ram_reading_held : std_logic := '0';
+  constant current_cache_line_new_address : unsigned(26 downto 3) := (others => '0');
+  constant current_cache_line_update_all : std_logic := '0';
 
+  signal x4_hr_clk_phaseshift_current : std_logic := '1';
+  signal x4_hr_clk_fast_current : std_logic := '1';
+  signal x4_hr_clock_phase : unsigned(2 downto 0) := "000";
+  signal x4_hr_clock_phase_drive : unsigned(2 downto 0) := "111";
+
+  signal state : state_t := StartupDelay;
+  signal x2_rwr_counter : unsigned(7 downto 0) := (others => '0');
+  signal x2_rwr_waiting : std_logic := '0';
+  signal x2_current_cache_line_drive : cache_row_t := (others => (others => '0'));
+  signal x2_current_cache_line_address_drive : unsigned(26 downto 3) := (others => '0');
+  signal x2_busy_internal : std_logic := '1';
+  signal x2_hr_command : unsigned(47 downto 0);
+
+  -- Initial transaction is config register write
+  signal x2_config_reg_write : std_logic := '1';
+  signal x2_ram_reading_held : std_logic := '0';
   signal x2_ram_wdata_drive : unsigned(7 downto 0) := x"00";
   signal x2_ram_wdata_hi_drive : unsigned(7 downto 0) := x"00";
   signal x2_ram_wdata_enlo_drive : std_logic := '0';
@@ -111,75 +128,27 @@ architecture gothic of hyperram_mega65 is
   -- 3 to 4 cycles to satisfy the 40ns minimum time requirement.
   -- This also sets the drive strength to the maximum, to get cleaner faster
   -- clock transitions. This fixes checkerboard read errors at 80MHz.
-
   signal x2_conf_buf0 : unsigned(7 downto 0) := x"ff";
   signal x2_conf_buf1 : unsigned(7 downto 0) := x"f6";
-  constant conf_buf0_in : unsigned(7 downto 0) := x"ff";
-  constant conf_buf1_in : unsigned(7 downto 0) := x"f6";
-  constant conf_buf0_set : std_logic := '0';
-  constant conf_buf1_set : std_logic := '0';
   signal x2_last_conf_buf0_set : std_logic := '0';
   signal x2_last_conf_buf1_set : std_logic := '0';
-
-  -- 4 is correct for the part we have in the MEGA65, after we have set the
-  -- config register to minimise latency.
-  constant write_latency : unsigned(7 downto 0) := to_unsigned(5,8);
-  -- And the matching extra latency is 5
-  constant extra_write_latency : unsigned(7 downto 0) := to_unsigned(7,8);
-
-  constant read_phase_shift : std_logic := '0';
-  constant write_phase_shift : std_logic := '1';
-
   signal x2_countdown : integer range 0 to 63 := 0;
   signal x2_countdown_is_zero : std_logic := '1';
   signal x2_extra_latency : std_logic := '0';
   signal x2_countdown_timeout : std_logic := '0';
-
   signal x2_pause_phase : std_logic := '0';
-
   signal x2_data_ready_strobe_hold : std_logic := '0';
-
-  signal x1_request_toggle : std_logic := '0';
   signal x2_request_accepted : std_logic := '0';
   signal x2_last_request_toggle : std_logic := '0';
-
   signal x2_byte_phase : unsigned(5 downto 0) := to_unsigned(0,6);
   signal x2_write_byte_phase : std_logic := '0';
-
   signal x2_cycle_count : integer := 0;
-
-  -- Collect writes together to hide write latency
-  signal x1_write_collect0_dispatchable : std_logic := '0';
-  signal x1_write_collect0_address : unsigned(26 downto 3) := (others => '0');
-  signal x1_write_collect0_valids : std_logic_vector(0 to 7) := (others => '0');
-  signal x1_write_collect0_data : cache_row_t := ( others => x"00" );
   signal x2_write_collect0_toolate : std_logic := '0'; -- Set when its too late to
-                                                    -- add more bytes to the write.
   signal x2_write_collect0_flushed : std_logic := '1';
-
-
   signal x2_is_expected_to_respond : boolean := false;
-  signal x1_ram_normalfetch : boolean := false;
-
-  constant current_cache_line_new_address : unsigned(26 downto 3) := (others => '0');
-  signal x1_current_cache_line_update : cache_row_t := (others => (others => '0'));
-  signal x1_current_cache_line_update_address : unsigned(26 downto 3) := (others => '0');
-  constant current_cache_line_update_all : std_logic := '0';
-  signal x1_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
   signal x2_last_current_cache_line_update_all : std_logic := '0';
   signal x2_last_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
-
-  signal x1_fake_data_ready_strobe : std_logic := '0';
-  constant fake_rdata : unsigned(7 downto 0) := x"00";
-  constant fake_rdata_hi : unsigned(7 downto 0) := x"00";
-
-  signal x1_request_counter_int : std_logic := '1';
-
-
   signal x2_hr_rwds_high_seen : std_logic := '0';
-
-  signal x1_write_blocked : std_logic := '0';
-
   signal x2_background_write : std_logic := '0';
   signal x2_background_write_valids : std_logic_vector(0 to 7) := x"00";
   signal x2_background_write_data : cache_row_t := (others => (others => '0'));
@@ -188,10 +157,49 @@ architecture gothic of hyperram_mega65 is
   signal x2_background_write_next_address_matches_collect0 : std_logic := '0';
   signal x2_background_chained_write : std_logic := '0';
   signal x2_background_write_fetch : std_logic := '0';
-  signal x1_cache_row_update_address_changed : std_logic := '0';
-
   signal x2_write_continues : integer range 0 to 255 := 0;
-  constant write_continues_max : integer range 0 to 255 := 16;
+
+  -- Delay sending of the initial configuration write command
+  -- to give the HyperRAM chip time to start up
+  -- Datasheet says 150usec is required, we do that, plus a bit.
+  signal x2_start_delay_counter : integer
+--    := 150*(1000/162)+20
+    := 150*200+20
+    -- plus a correction factor to get initial config register write correctly
+    -- aligned with the clock
+    +2;
+  signal x2_start_delay_expired : std_logic := '0';
+
+  -- phaseshift has to also start at 1 for the above to work.
+  signal x2_hr_clk_phaseshift : std_logic := '1';
+  signal x2_hr_clk_fast : std_logic := '1';
+  signal x2_hr_clock_phase165 : unsigned(1 downto 0) := "00";
+  signal x2_seven_plus_read_time_adjust : unsigned(5 downto 0) := "000000";
+  signal x2_hyperram_access_address_read_time_adjusted : unsigned(5 downto 0) := "000000";
+  signal x2_hyperram_access_address : unsigned(26 downto 0) := to_unsigned(0,27);
+  signal x2_read_request_held : std_logic := '0';
+  signal x2_write_request_held : std_logic := '0';
+  signal x2_read_request_delatch : std_logic := '0';
+
+  -- Collect writes together to hide write latency
+  signal x1_ram_address : unsigned(26 downto 0) :=
+    "010000000000001000000000000"; -- = bottom 27 bits of x"A001000";
+  signal x1_ram_reading : std_logic := '0';
+  signal x1_request_toggle : std_logic := '0';
+  signal x1_write_collect0_dispatchable : std_logic := '0';
+  signal x1_write_collect0_address : unsigned(26 downto 3) := (others => '0');
+  signal x1_write_collect0_valids : std_logic_vector(0 to 7) := (others => '0');
+  signal x1_write_collect0_data : cache_row_t := ( others => x"00" );
+  signal x1_ram_normalfetch : boolean := false;
+  signal x1_fake_data_ready_strobe : std_logic := '0';
+  signal x1_request_counter_int : std_logic := '1';
+  signal x1_write_blocked : std_logic := '0';
+  signal x1_current_cache_line_update : cache_row_t := (others => (others => '0'));
+  signal x1_current_cache_line_update_address : unsigned(26 downto 3) := (others => '0');
+  signal x1_current_cache_line_update_flags : std_logic_vector(0 to 7) := (others => '0');
+  signal x1_cache_row_update_address_changed : std_logic := '0';
+  signal x1_read_request_latch : std_logic := '0';
+  signal x1_write_request_latch : std_logic := '0';
 
   -- If we get too many writes in short succession, we may need to queue up to
   -- two of the writes, while waiting for slow_devices to notice
@@ -208,42 +216,8 @@ architecture gothic of hyperram_mega65 is
   signal x1_queued2_wdata_hi : unsigned(7 downto 0) := x"00";
   signal x1_queued2_waddr : unsigned(26 downto 0) := to_unsigned(0,27);
 
-  -- Delay sending of the initial configuration write command
-  -- to give the HyperRAM chip time to start up
-  -- Datasheet says 150usec is required, we do that, plus a bit.
-  signal x2_start_delay_counter : integer
---    := 150*(1000/162)+20
-    := 150*200+20
-    -- plus a correction factor to get initial config register write correctly
-    -- aligned with the clock
-    +2;
-  signal x2_start_delay_expired : std_logic := '0';
-
-  -- phaseshift has to also start at 1 for the above to work.
-  signal x2_hr_clk_phaseshift : std_logic := '1';
-  signal x4_hr_clk_phaseshift_current : std_logic := '1';
-
-  signal x2_hr_clk_fast : std_logic := '1';
-  signal x4_hr_clk_fast_current : std_logic := '1';
-
-  signal x2_hr_clock_phase165 : unsigned(1 downto 0) := "00";
-  signal x4_hr_clock_phase : unsigned(2 downto 0) := "000";
-  signal x4_hr_clock_phase_drive : unsigned(2 downto 0) := "111";
-
-  constant read_time_adjust : integer range 0 to 255 := 0;
-  signal x2_seven_plus_read_time_adjust : unsigned(5 downto 0) := "000000";
-  signal x2_hyperram_access_address_read_time_adjusted : unsigned(5 downto 0) := "000000";
-
-  signal x2_hyperram_access_address : unsigned(26 downto 0) := to_unsigned(0,27);
-
-  signal x2_read_request_held : std_logic := '0';
-  signal x2_write_request_held : std_logic := '0';
-
-  signal x1_read_request_latch : std_logic := '0';
-  signal x2_read_request_delatch : std_logic := '0';
-  signal x1_write_request_latch : std_logic := '0';
-
 begin
+
   process (pixelclock) is
   begin
     if rising_edge(pixelclock) then
@@ -259,16 +233,6 @@ begin
       if x2_read_request_delatch = '1' then
         x1_read_request_latch <= '0';
       end if;
-
-      report "read_request=" & std_logic'image(read_request)
-        & ", x2_read_request_held=" & std_logic'image(x2_read_request_held)
-        & ", x2_write_request_held=" & std_logic'image(x2_write_request_held)
-        & ", x1_read_request_latch=" & std_logic'image(x1_read_request_latch)
-        & ", x1_write_request_latch=" & std_logic'image(x1_write_request_latch)
-        & ", x2_busy_internal=" & std_logic'image(x2_busy_internal)
-        & ", write_request=" & std_logic'image(write_request)
-        & ", x1_request_toggle(last) = " & std_logic'image(x1_request_toggle) & "(" & std_logic'image(x2_last_request_toggle) & ")."
-        & ", address=$" & to_hstring(address);
 
       -- Update short-circuit cache line
       -- (We don't change validity, since we don't know if it is
@@ -368,7 +332,6 @@ begin
 
       -- Ignore read requests to the current block read, as they get
       -- short-circuited in the inner state machine to save time.
-      report "address = $" & to_hstring(address);
       if (read_request or x1_read_request_latch)='1' and x2_busy_internal='0' then
         report "Making read request for $" & to_hstring(address);
         -- Begin read request
@@ -475,7 +438,7 @@ begin
 
   process (clock325) is
     variable clock_status_vector : unsigned(4 downto 0);
-    begin
+  begin
     -- Optionally delay HR_CLK by 1/2 an 160MHz clock cycle
     -- (actually just by optionally inverting it)
     if rising_edge(clock325) then
@@ -496,7 +459,6 @@ begin
       clock_status_vector(4) := x4_hr_clk_fast_current;
       clock_status_vector(3) := x4_hr_clk_phaseshift_current;
       clock_status_vector(2 downto 0) := x4_hr_clock_phase;
-      report "clock phase vector = " & to_string(std_logic_vector(clock_status_vector));
       case clock_status_vector is
         -- Slow clock rate, no phase shift
         when "00000" => hr_clk_p <= '0';
@@ -611,10 +573,6 @@ begin
       end if;
       x2_data_ready_strobe_hold <= '0';
 
-      -- HyperRAM state machine
-      report "State = " & state_t'image(state) & " @ Cycle " & integer'image(x2_cycle_count)
-        & ", x2_config_reg_write=" & std_logic'image(x2_config_reg_write);
-
       if conf_buf0_set /= x2_last_conf_buf0_set then
         x2_last_conf_buf0_set <= conf_buf0_set;
         x2_conf_buf0 <= conf_buf0_in;
@@ -623,7 +581,6 @@ begin
         x2_last_conf_buf1_set <= conf_buf1_set;
         x2_conf_buf1 <= conf_buf1_in;
       end if;
-
 
       if current_cache_line_update_all = x2_last_current_cache_line_update_all then
         if x1_current_cache_line_update_address = x2_current_cache_line_address_drive then
@@ -665,7 +622,6 @@ begin
           hr_cs0 <= '1';
           state <= Idle;
         when Idle =>
-          report "Tristating hr_d";
           hr_d <= (others => 'Z');
 
           x2_read_request_held <= '0';
@@ -687,12 +643,6 @@ begin
             x2_write_collect0_toolate <= '0';
             x2_write_collect0_flushed <= '0';
           end if;
-
-          -- Mark us ready for a new job, or pick up a new job
-          report
-            "r_t=" & std_logic'image(x1_request_toggle)
-            & ", l_r_t=" & std_logic'image(x2_last_request_toggle)
-            & ", x2_rwr_counter = " & integer'image(to_integer(x2_rwr_counter));
 
           if x2_rwr_counter /= to_unsigned(0,8) then
             x2_rwr_counter <= x2_rwr_counter - 1;
@@ -749,14 +699,14 @@ begin
               x2_config_reg_write <= x1_write_collect0_address(25);
 
               -- Prepare command vector
-              hr_command(47) <= '0'; -- WRITE
-              hr_command(46) <= x1_write_collect0_address(25); -- Memory, not register space
-              hr_command(45) <= '1'; -- linear
-              hr_command(44 downto 35) <= (others => '0'); -- unused upper address bits
-              hr_command(15 downto 3) <= (others => '0'); -- reserved bits
-              hr_command(34 downto 16) <= x1_write_collect0_address(22 downto 4);
-              hr_command(2) <= x1_write_collect0_address(3);
-              hr_command(1 downto 0) <= "00";
+              x2_hr_command(47) <= '0'; -- WRITE
+              x2_hr_command(46) <= x1_write_collect0_address(25); -- Memory, not register space
+              x2_hr_command(45) <= '1'; -- linear
+              x2_hr_command(44 downto 35) <= (others => '0'); -- unused upper address bits
+              x2_hr_command(15 downto 3) <= (others => '0'); -- reserved bits
+              x2_hr_command(34 downto 16) <= x1_write_collect0_address(22 downto 4);
+              x2_hr_command(2) <= x1_write_collect0_address(3);
+              x2_hr_command(1 downto 0) <= "00";
               hr_reset <= '1'; -- active low reset
 
 
@@ -780,12 +730,10 @@ begin
               end if;
               x2_countdown_is_zero <= '0';
             else
-              report "Clearing x2_busy_internal";
               x2_busy_internal <= '0';
               x2_request_accepted <= x1_request_toggle;
             end IF;
             -- Release CS line between transactions
-            report "Releasing hyperram CS lines";
             hr_cs0 <= '1';
           end if;
 
@@ -800,26 +748,26 @@ begin
           report "Setting up to read $" & to_hstring(x1_ram_address) & " ( address = $" & to_hstring(address) & ")";
 
           -- Prepare command vector
-          hr_command(47) <= '1'; -- READ
+          x2_hr_command(47) <= '1'; -- READ
           -- Map actual RAM to bottom 32MB of 64MB space (repeated 4x)
           -- and registers to upper 32MB
---            hr_command(46) <= '1'; -- Memory address space (1) / Register
-          hr_command(46) <= x1_ram_address(25); -- Memory address space (1) / Register
+--            x2_hr_command(46) <= '1'; -- Memory address space (1) / Register
+          x2_hr_command(46) <= x1_ram_address(25); -- Memory address space (1) / Register
                                              -- address space select (0) ?
-          hr_command(45) <= '1'; -- Linear access (not wrapped)
-          hr_command(44 downto 37) <= (others => '0'); -- unused upper address bits
-          hr_command(34 downto 16) <= x1_ram_address(22 downto 4);
-          hr_command(15 downto 3) <= (others => '0'); -- reserved bits
+          x2_hr_command(45) <= '1'; -- Linear access (not wrapped)
+          x2_hr_command(44 downto 37) <= (others => '0'); -- unused upper address bits
+          x2_hr_command(34 downto 16) <= x1_ram_address(22 downto 4);
+          x2_hr_command(15 downto 3) <= (others => '0'); -- reserved bits
           if x1_ram_address(25) = '0' then
             -- Always read on 8 byte boundaries, and read a full cache line
-            hr_command(2) <= x1_ram_address(3);
-            hr_command(1 downto 0) <= "00";
+            x2_hr_command(2) <= x1_ram_address(3);
+            x2_hr_command(1 downto 0) <= "00";
           else
             -- Except that register reads are weird: They read the same 2 bytes
             -- over and over again, so we have to make it set bit 0 of the CA
             -- for the "odd" registers"
-            hr_command(2 downto 1) <= "00";
-            hr_command(0) <= x1_ram_address(3);
+            x2_hr_command(2 downto 1) <= "00";
+            x2_hr_command(0) <= x1_ram_address(3);
           end if;
 
 
@@ -838,7 +786,7 @@ begin
 
         when WriteSetup =>
 
-          report "Preparing hr_command etc for write to $" & to_hstring(x1_ram_address);
+          report "Preparing x2_hr_command etc for write to $" & to_hstring(x1_ram_address);
 
           x2_background_write_count <= 2;
           x2_background_write <= '0';
@@ -848,15 +796,15 @@ begin
           -- Prepare command vector
           -- As HyperRAM addresses on 16bit boundaries, we shift the address
           -- down one bit.
-          hr_command(47) <= '0'; -- WRITE
-          hr_command(46) <= x1_ram_address(25); -- Memory, not register space
-          hr_command(45) <= '1'; -- linear
+          x2_hr_command(47) <= '0'; -- WRITE
+          x2_hr_command(46) <= x1_ram_address(25); -- Memory, not register space
+          x2_hr_command(45) <= '1'; -- linear
 
-          hr_command(44 downto 35) <= (others => '0'); -- unused upper address bits
-          hr_command(15 downto 3) <= (others => '0'); -- reserved bits
+          x2_hr_command(44 downto 35) <= (others => '0'); -- unused upper address bits
+          x2_hr_command(15 downto 3) <= (others => '0'); -- reserved bits
 
-          hr_command(34 downto 16) <= x1_ram_address(22 downto 4);
-          hr_command(2 downto 0) <= x1_ram_address(3 downto 1);
+          x2_hr_command(34 downto 16) <= x1_ram_address(22 downto 4);
+          x2_hr_command(2 downto 0) <= x1_ram_address(3 downto 1);
 
           hr_reset <= '1'; -- active low reset
 
@@ -881,7 +829,7 @@ begin
 
         when HyperRAMOutputCommandSlow =>
           report "Writing command, x2_hyperram_access_address=$" & to_hstring(x2_hyperram_access_address);
-          report "hr_command = $" & to_hstring(hr_command);
+          report "x2_hr_command = $" & to_hstring(x2_hr_command);
           -- Call HyperRAM to attention
           hr_cs0 <= '0';
 
@@ -949,23 +897,23 @@ begin
           else
 
             -- Toggle data while clock steady
-            report "Presenting hr_command byte on hr_d = $" & to_hstring(hr_command(47 downto 40))
+            report "Presenting x2_hr_command byte on hr_d = $" & to_hstring(x2_hr_command(47 downto 40))
               & ", x2_countdown = " & integer'image(x2_countdown);
 
-            hr_d <= hr_command(47 downto 40);
-            hr_command(47 downto 8) <= hr_command(39 downto 0);
+            hr_d <= x2_hr_command(47 downto 40);
+            x2_hr_command(47 downto 8) <= x2_hr_command(39 downto 0);
 
             -- Also shift out config register values, if required
             if x2_config_reg_write='1' and x2_ram_reading_held='0' then
               report "shifting in conf value $" & to_hstring(x2_conf_buf0);
-              hr_command(7 downto 0) <= x2_conf_buf0;
+              x2_hr_command(7 downto 0) <= x2_conf_buf0;
               x2_conf_buf0 <= x2_conf_buf1;
               x2_conf_buf1 <= x2_conf_buf0;
             else
-              hr_command(7 downto 0) <= x"00";
+              x2_hr_command(7 downto 0) <= x"00";
             end if;
 
-            report "Writing command byte $" & to_hstring(hr_command(47 downto 40));
+            report "Writing command byte $" & to_hstring(x2_hr_command(47 downto 40));
 
             if x2_countdown = 3 and x2_config_reg_write='1' then
               if x2_background_write='1' then
@@ -1193,7 +1141,6 @@ begin
 
         when HyperRAMReadWaitSlow =>
           hr_rwds <= 'Z';
-          report "Presenting tri-state on hr_d";
           hr_d <= (others => 'Z');
 
           x2_pause_phase <= not x2_pause_phase;
@@ -1256,8 +1203,6 @@ begin
               if x2_byte_phase = x2_hyperram_access_address_read_time_adjusted then
                 report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d);
                 rdata <= hr_d;
-                report "hr_return='1'";
-                report "hr_return='0'";
                 if rdata_16en='0' then
                   report "asserting data_ready_strobe on low byte";
                   data_ready_strobe <= '1';
@@ -1268,15 +1213,12 @@ begin
               if x2_byte_phase = (x2_hyperram_access_address_read_time_adjusted+1) and (rdata_16en='1') then
                 report "DISPATCH: Returning freshly read high-byte data = $" & to_hstring(hr_d);
                 rdata_hi <= hr_d;
-                report "hr_return='1'";
-                report "hr_return='0'";
 
                 report "asserting data_ready_strobe on high byte";
                 data_ready_strobe <= '1';
                 x2_data_ready_strobe_hold <= '1';
               end if;
 
-              report "x2_byte_phase = " & integer'image(to_integer(x2_byte_phase));
               if (x2_byte_phase = x2_seven_plus_read_time_adjust) then
                 x2_rwr_counter <= rwr_delay;
                 x2_rwr_waiting <= '1';
