@@ -7,33 +7,33 @@ use work.cputypes.all;
 
 entity hyperram_mega65 is
   port (
-    pixelclock        : in    std_logic; -- for slow devices bus interface is
-    clock163          : in    std_logic; -- Used for fast clock for HyperRAM
-    clock325          : in    std_logic; -- Used for fast clock for HyperRAM SERDES units
+    pixelclock        : in  std_logic; -- for slow devices bus interface is
+    clock163          : in  std_logic; -- Used for fast clock for HyperRAM
+    clock325          : in  std_logic; -- Used for fast clock for HyperRAM SERDES units
 
-    request_counter   : out   std_logic := '0';
-    read_request      : in    std_logic;
-    write_request     : in    std_logic;
-    address           : in    unsigned(26 downto 0);
-    wdata             : in    unsigned(7 downto 0);
-    wdata_hi          : in    unsigned(7 downto 0);
-    wen_hi            : in    std_logic;
-    wen_lo            : in    std_logic;
-    rdata_hi          : out   unsigned(7 downto 0);
-    rdata_16en        : in    std_logic;         -- set this high to be able to read 16-bit values
-    rdata             : out   unsigned(7 downto 0);
-    data_ready_strobe : out   std_logic := '0';
-    busy              : out   std_logic := '0';
+    request_counter   : out std_logic := '0';
+    read_request      : in  std_logic;
+    write_request     : in  std_logic;
+    address           : in  unsigned(26 downto 0);
+    wdata             : in  unsigned(7 downto 0);
+    wdata_hi          : in  unsigned(7 downto 0);
+    wen_hi            : in  std_logic;
+    wen_lo            : in  std_logic;
+    rdata_hi          : out unsigned(7 downto 0);
+    rdata_16en        : in  std_logic;         -- set this high to be able to read 16-bit values
+    rdata             : out unsigned(7 downto 0);
+    data_ready_strobe : out std_logic := '0';
+    busy              : out std_logic := '0';
 
-    hr_d_in           : in    unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
-    hr_rwds_in        : in    std_logic := 'Z'; -- RW Data strobe
-    hr_d_out          : out   unsigned(7 downto 0) := (others => 'Z'); -- Data/Address
-    hr_rwds_out       : out   std_logic := 'Z'; -- RW Data strobe
-    hr_d_oe           : out   std_logic;
-    hr_rwds_oe        : out   std_logic;
-    hr_reset          : out   std_logic := '1'; -- Active low RESET line to HyperRAM
-    hr_clk_p          : out   std_logic := '1';
-    hr_cs0            : out   std_logic := '1'
+    hr_d_in           : in  unsigned(7 downto 0); -- Data/Address
+    hr_rwds_in        : in  std_logic; -- RW Data strobe
+    hr_d_out          : out unsigned(7 downto 0); -- Data/Address
+    hr_rwds_out       : out std_logic; -- RW Data strobe
+    hr_d_oe           : out std_logic := '0';
+    hr_rwds_oe        : out std_logic := '0';
+    hr_reset          : out std_logic := '1'; -- Active low RESET line to HyperRAM
+    hr_clk_p          : out std_logic := '1';
+    hr_cs0            : out std_logic := '1'
   );
 end entity hyperram_mega65;
 
@@ -148,14 +148,12 @@ architecture synthesis of hyperram_mega65 is
   -- Collect writes together to hide write latency
   signal x1_ram_address : unsigned(26 downto 0) :=
     "010000000000001000000000000"; -- = bottom 27 bits of x"A001000";
-  signal x1_ram_reading : std_logic := '0';
   signal x1_request_toggle : std_logic := '0';
   signal x1_write_collect0_dispatchable : std_logic := '0';
   signal x1_write_collect0_address : unsigned(26 downto 3) := (others => '0');
   signal x1_write_collect0_valids : std_logic_vector(0 to 7) := (others => '0');
   signal x1_write_collect0_data : cache_row_t := ( others => x"00" );
   signal x1_ram_normalfetch : boolean := false;
-  signal x1_fake_data_ready_strobe : std_logic := '0';
   signal x1_request_counter_int : std_logic := '1';
   signal x1_write_blocked : std_logic := '0';
   signal x1_read_request_latch : std_logic := '0';
@@ -206,8 +204,6 @@ begin
         x1_write_blocked <= '1';
         busy <= '1';
       end if;
-
-      x1_fake_data_ready_strobe <= '0';
 
       if read_request = '1' or write_request = '1' or x1_read_request_latch='1' or x1_write_request_latch='1' then
         x1_request_counter_int <= not x1_request_counter_int;
@@ -276,7 +272,6 @@ begin
         if x2_request_accepted = x1_request_toggle then
           -- Normal RAM read.
           report "x1_request_toggle flipped";
-          x1_ram_reading <= '1';
           x1_ram_address <= address;
           x1_ram_normalfetch <= true;
           x1_request_toggle <= not x1_request_toggle;
@@ -305,12 +300,7 @@ begin
 
       elsif (write_request or x1_write_request_latch)='1' and x2_busy_internal='0' then
         report "Making write request: addr $" & to_hstring(address) & " <= " & to_hstring(wdata);
-        -- Begin write request
-        -- Latch address and data
-
         x1_write_request_latch <= '0';
-
-        -- Collect writes together for dispatch
 
         -- Can we add the write to an existing collected write?
         if x2_write_collect0_toolate = '0' and x1_write_collect0_address = address(26 downto 3)
@@ -456,17 +446,9 @@ begin
       end if;
 
       if x2_data_ready_strobe_hold = '0' then
-        if x1_fake_data_ready_strobe='1' then
-          report "asserting data_ready_strobe via x1_fake_data_ready_strobe";
-        end if;
-        data_ready_strobe <= x1_fake_data_ready_strobe;
-        if x1_fake_data_ready_strobe='1' then
-          rdata    <= (others => '0');
-          rdata_hi <= (others => '0');
-        end if;
+        data_ready_strobe <= '0';
       else
         report "holding data_ready_strobe for an extra cycle";
-        report "asserting data_ready_strobe";
         data_ready_strobe <= '1';
       end if;
       x2_data_ready_strobe_hold <= '0';
@@ -527,21 +509,13 @@ begin
           -- within the comming clock cycle
           if x2_rwr_waiting='0' and x2_hr_clock_phase165 = "10" then
             if x1_request_toggle /= x2_last_request_toggle and x1_write_collect0_dispatchable='0' then
-              x2_ram_reading_held <= x1_ram_reading;
+              x2_ram_reading_held <= '1';
 
-              if x1_ram_reading = '1' then
-                report "Waiting to start read";
-                x2_request_accepted <= x1_request_toggle;
-                x2_last_request_toggle <= x1_request_toggle;
-                state <= ReadSetup;
-                x2_busy_internal <= '1';
-              else
-                report "Waiting to start write";
-                x2_request_accepted <= x1_request_toggle;
-                x2_last_request_toggle <= x1_request_toggle;
-                state <= WriteSetup;
-                x2_busy_internal <= '1';
-              end if;
+              report "Waiting to start read";
+              x2_request_accepted <= x1_request_toggle;
+              x2_last_request_toggle <= x1_request_toggle;
+              state <= ReadSetup;
+              x2_busy_internal <= '1';
             elsif x1_write_collect0_dispatchable = '1' then
               -- Do background write.
               x2_busy_internal <= '0';
