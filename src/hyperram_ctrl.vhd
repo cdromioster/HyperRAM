@@ -56,6 +56,13 @@ architecture synthesis of hyperram_ctrl is
    signal write_clk_count   : integer range 0 to 255;
    signal recovery_count    : integer range 0 to 255;
 
+   constant R_CA_RW           : integer := 47;
+   constant R_CA_AS           : integer := 46;
+   constant R_CA_BURST        : integer := 45;
+   subtype  R_CA_ADDR_MSB is natural range 44 downto 16;
+   subtype  R_CA_RESERVED is natural range 15 downto  3;
+   subtype  R_CA_ADDR_LSB is natural range  2 downto  0;
+
    constant C_DEBUG_MODE                     : boolean := false;
    attribute mark_debug                      : boolean;
    attribute mark_debug of hb_rstn_o         : signal is C_DEBUG_MODE;
@@ -91,12 +98,13 @@ begin
                   byteenable      <= avm_byteenable_i;
                   burst_count     <= to_integer(unsigned(avm_burstcount_i));
 
-                  command_address <= avm_read_i &                          -- Read
-                                     avm_address_i(31) &                   -- Register space
-                                     '1' &                                 -- Linear Burst
-                                     '0' & avm_address_i(30 downto 3) &    -- Row & Upper Column
-                                     "0000000000000" &                     -- Reserved
-                                     avm_address_i(2 downto 0);            -- Lower Column
+                  command_address(R_CA_RW)       <= avm_read_i;
+                  command_address(R_CA_AS)       <= avm_address_i(31);
+                  command_address(R_CA_BURST)    <= '1';
+                  command_address(R_CA_ADDR_MSB) <= '0' & avm_address_i(30 downto 3);
+                  command_address(R_CA_RESERVED) <= "0000000000000";
+                  command_address(R_CA_ADDR_LSB) <= avm_address_i(2 downto 0);
+
                   avm_waitrequest_o <= '1';
                   hb_csn_o          <= '0';
                   hb_dq_oe_o        <= '1';
