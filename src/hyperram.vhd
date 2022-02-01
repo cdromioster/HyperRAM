@@ -15,6 +15,9 @@ use ieee.numeric_std.all;
 -- clk_x2_i :_200 MHz. Used for I/O to HyperRAM device.
 
 entity hyperram is
+   generic (
+      G_LATENCY : integer
+   );
    port (
       clk_i               : in  std_logic; -- Main clock
       clk_x2_i            : in  std_logic; -- Physical I/O only
@@ -64,6 +67,9 @@ begin
    --------------------------------------------------------
 
    i_hyperram_ctrl : entity work.hyperram_ctrl
+      generic map (
+         G_LATENCY => G_LATENCY
+      )
       port map (
          clk_i                => clk_i,
          rst_i                => rst_i,

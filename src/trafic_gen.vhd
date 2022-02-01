@@ -8,6 +8,7 @@ use ieee.numeric_std.all;
 
 entity trafic_gen is
    generic (
+      G_LATENCY      : integer;
       G_ADDRESS_SIZE : integer  -- Number of bits
    );
    port (
@@ -36,11 +37,20 @@ architecture synthesis of trafic_gen is
    constant C_INIT_DELAY   : integer := 150*100; -- 150 us @ 100 MHz.
    constant C_DATA_INIT    : std_logic_vector(15 downto 0) := X"1357";
 
+   constant R_C0_DPD          : integer := 15;
+   subtype  R_C0_DRIVE    is natural range 14 downto 12;
+   subtype  R_C0_RESERCED is natural range 11 downto  8;
+   subtype  R_C0_LATENCY  is natural range  7 downto  4;
+   constant R_C0_FIXED        : integer :=  3;
+   constant R_C0_HYBRID       : integer :=  2;
+   subtype  R_C0_BURST    is natural range  1 downto  0;
+
    signal address : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
    signal data    : std_logic_vector(15 downto 0);
 
    type state_t is (
       INIT_ST,
+      CONFIG_ST,
       WRITING_ST,
       READING_ST,
       VERIFYING_ST,
@@ -92,12 +102,32 @@ begin
                      address_o   <= (others => '0');
                      data_exp_o  <= (others => '0');
                      data_read_o <= (others => '0');
-                     state       <= WRITING_ST;
+                     state       <= CONFIG_ST;
                   end if;
                end if;
 
-            when WRITING_ST =>
+            when CONFIG_ST =>
+               -- Write to configuration register 0
+               avm_write_o       <= '1';
+               avm_read_o        <= '0';
+               avm_address_o     <= (others => '0');
+               avm_address_o(18 downto 11) <= X"01";
+               avm_address_o(31) <= '1';
+               avm_writedata_o(R_C0_DPD)     <= '1';    -- normal
+               avm_writedata_o(R_C0_DRIVE)   <= "111";  -- 19 ohms
+               avm_writedata_o(R_C0_RESERCED)<= "1111";
+               avm_writedata_o(R_C0_LATENCY) <= std_logic_vector(to_unsigned(G_LATENCY, 4) - 5);
+               avm_writedata_o(R_C0_FIXED)   <= '0';    -- variable
+               avm_writedata_o(R_C0_HYBRID)  <= '1';    -- legacy
+               avm_writedata_o(R_C0_BURST)   <= "10";   -- 16 bytes
+               avm_byteenable_o  <= "11";
+               avm_burstcount_o  <= X"01";
 
+               if avm_write_o = '1' and avm_waitrequest_i = '0' then
+                  state <= WRITING_ST;
+               end if;
+
+            when WRITING_ST =>
                avm_write_o      <= '1';
                avm_read_o       <= '0';
                avm_address_o    <= (others => '0');

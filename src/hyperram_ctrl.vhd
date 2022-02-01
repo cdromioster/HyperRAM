@@ -3,6 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity hyperram_ctrl is
+   generic (
+      G_LATENCY : integer
+   );
    port (
       clk_i               : in  std_logic;
       rst_i               : in  std_logic;
@@ -47,6 +50,7 @@ architecture synthesis of hyperram_ctrl is
    signal writedata         : std_logic_vector(15 downto 0);
    signal byteenable        : std_logic_vector(1 downto 0);
    signal read              : std_logic;
+   signal config            : std_logic;
    signal burst_count       : integer range 0 to 255;
    signal command_address   : std_logic_vector(47 downto 0);
    signal ca_count          : integer range 0 to 3;
@@ -62,6 +66,7 @@ architecture synthesis of hyperram_ctrl is
    subtype  R_CA_ADDR_MSB is natural range 44 downto 16;
    subtype  R_CA_RESERVED is natural range 15 downto  3;
    subtype  R_CA_ADDR_LSB is natural range  2 downto  0;
+
 
    constant C_DEBUG_MODE                     : boolean := false;
    attribute mark_debug                      : boolean;
@@ -94,6 +99,7 @@ begin
                end if;
                if avm_read_i = '1' or avm_write_i = '1' then
                   read            <= avm_read_i;
+                  config          <= avm_address_i(31);
                   writedata       <= avm_writedata_i;
                   byteenable      <= avm_byteenable_i;
                   burst_count     <= to_integer(unsigned(avm_burstcount_i));
@@ -109,19 +115,26 @@ begin
                   hb_csn_o          <= '0';
                   hb_dq_oe_o        <= '1';
                   ca_count          <= 2;
+                  if avm_address_i(31) = '1' then
+                     ca_count <= 3;
+                  end if;
                   state             <= COMMAND_ADDRESS_ST;
                end if;
 
             when COMMAND_ADDRESS_ST =>
-               command_address <= command_address(31 downto 0) & command_address(15 downto 0);
+               command_address <= command_address(31 downto 0) & writedata(15 downto 0);
 
                if ca_count > 0 then
                   hb_dq_oe_o  <= '1';
                   hb_ck_ddr_o <= "10";
                   ca_count    <= ca_count - 1;
                else
-                  latency_count <= 10;
-                  state         <= LATENCY_ST;
+                  latency_count <= 2*G_LATENCY - 2;
+                  if config = '1' then
+                     state <= RECOVERY_ST;
+                  else
+                     state <= LATENCY_ST;
+                  end if;
                end if;
 
 
