@@ -445,12 +445,7 @@ begin
         x2_background_write_next_address_matches_collect0 <= '0';
       end if;
 
-      if x2_data_ready_strobe_hold = '0' then
-        data_ready_strobe <= '0';
-      else
-        report "holding data_ready_strobe for an extra cycle";
-        data_ready_strobe <= '1';
-      end if;
+      data_ready_strobe <= x2_data_ready_strobe_hold;
       x2_data_ready_strobe_hold <= '0';
 
       -- Keep read request when required
