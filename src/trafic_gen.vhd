@@ -8,7 +8,6 @@ use ieee.numeric_std.all;
 
 entity trafic_gen is
    generic (
-      G_LATENCY      : integer;
       G_ADDRESS_SIZE : integer  -- Number of bits
    );
    port (
@@ -34,23 +33,13 @@ end entity trafic_gen;
 
 architecture synthesis of trafic_gen is
 
-   constant C_INIT_DELAY   : integer := 150*100; -- 150 us @ 100 MHz.
    constant C_DATA_INIT    : std_logic_vector(15 downto 0) := X"1357";
-
-   constant R_C0_DPD          : integer := 15;
-   subtype  R_C0_DRIVE    is natural range 14 downto 12;
-   subtype  R_C0_RESERCED is natural range 11 downto  8;
-   subtype  R_C0_LATENCY  is natural range  7 downto  4;
-   constant R_C0_FIXED        : integer :=  3;
-   constant R_C0_HYBRID       : integer :=  2;
-   subtype  R_C0_BURST    is natural range  1 downto  0;
 
    signal address : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
    signal data    : std_logic_vector(15 downto 0);
 
    type state_t is (
       INIT_ST,
-      CONFIG_ST,
       WRITING_ST,
       READING_ST,
       VERIFYING_ST,
@@ -58,8 +47,6 @@ architecture synthesis of trafic_gen is
    );
 
    signal state : state_t := INIT_ST;
-
-   signal init_counter : integer range 0 to C_INIT_DELAY;
 
    constant C_DEBUG_MODE                       : boolean := false;
    attribute mark_debug                        : boolean;
@@ -89,42 +76,17 @@ begin
 
          case state is 
             when INIT_ST =>
-               address  <= (others => '0');
-               data     <= C_DATA_INIT;
-               active_o <= '0';
-               if init_counter > 0 then
-                  init_counter <= init_counter - 1;
-               else
-                  report "Init completed";
-                  if start_i = '1' then
-                     active_o    <= '1';
-                     error_o     <= '0';
-                     address_o   <= (others => '0');
-                     data_exp_o  <= (others => '0');
-                     data_read_o <= (others => '0');
-                     state       <= CONFIG_ST;
-                  end if;
-               end if;
+               address     <= (others => '0');
+               data        <= C_DATA_INIT;
+               address_o   <= (others => '0');
+               data_exp_o  <= (others => '0');
+               data_read_o <= (others => '0');
+               active_o    <= '0';
+               error_o     <= '0';
 
-            when CONFIG_ST =>
-               -- Write to configuration register 0
-               avm_write_o       <= '1';
-               avm_read_o        <= '0';
-               avm_address_o     <= (others => '0');
-               avm_address_o(18 downto 11) <= X"01";
-               avm_address_o(31) <= '1';
-               avm_writedata_o(R_C0_DPD)     <= '1';    -- normal
-               avm_writedata_o(R_C0_DRIVE)   <= "111";  -- 19 ohms
-               avm_writedata_o(R_C0_RESERCED)<= "1111";
-               avm_writedata_o(R_C0_LATENCY) <= std_logic_vector(to_unsigned(G_LATENCY, 4) - 5);
-               avm_writedata_o(R_C0_FIXED)   <= '0';    -- variable
-               avm_writedata_o(R_C0_HYBRID)  <= '1';    -- legacy
-               avm_writedata_o(R_C0_BURST)   <= "10";   -- 16 bytes
-               avm_byteenable_o  <= "11";
-               avm_burstcount_o  <= X"01";
-
-               if avm_write_o = '1' and avm_waitrequest_i = '0' then
-                  state <= WRITING_ST;
+               if start_i = '1' then
+                  active_o <= '1';
+                  state    <= WRITING_ST;
                end if;
 
             when WRITING_ST =>
@@ -170,7 +132,6 @@ begin
                end if;
 
             when VERIFYING_ST =>
-
                if avm_readdatavalid_i = '1' then
                   data_exp_o  <= data;
                   data_read_o <= avm_readdata_i;
@@ -207,16 +168,14 @@ begin
                   data_read_o <= (others => '0');
                   state       <= WRITING_ST;
                end if;
-
          end case;
 
          if rst_i = '1' then
-            init_counter <= C_INIT_DELAY;
-            avm_write_o  <= '0';
-            avm_read_o   <= '0';
-            active_o     <= '0';
-            error_o      <= '0';
-            state        <= INIT_ST;
+            avm_write_o <= '0';
+            avm_read_o  <= '0';
+            active_o    <= '0';
+            error_o     <= '0';
+            state       <= INIT_ST;
          end if;
       end if;
    end process p_fsm;

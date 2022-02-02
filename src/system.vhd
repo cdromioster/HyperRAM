@@ -35,8 +35,6 @@ end entity system;
 
 architecture synthesis of system is
 
-   constant C_LATENCY : integer := 4;
-
    signal avm_write         : std_logic;
    signal avm_read          : std_logic;
    signal avm_address       : std_logic_vector(31 downto 0);
@@ -55,7 +53,6 @@ begin
 
    i_trafic_gen : entity work.trafic_gen
       generic map (
-         G_LATENCY      => C_LATENCY,
          G_ADDRESS_SIZE => G_ADDRESS_SIZE
       )
       port map (
@@ -84,9 +81,6 @@ begin
    --------------------------------------------------------
 
    i_hyperram : entity work.hyperram
-      generic map (
-         G_LATENCY => C_LATENCY
-      )
       port map (
          clk_i               => clk_i,
          clk_x2_i            => clk_x2_i,
