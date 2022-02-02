@@ -90,7 +90,8 @@ begin
          hb_dq_oe_o           => ctrl_dq_oe,
          hb_dq_ie_i           => ctrl_dq_ie,
          hb_rwds_ddr_out_o    => ctrl_rwds_ddr_out,
-         hb_rwds_oe_o         => ctrl_rwds_oe
+         hb_rwds_oe_o         => ctrl_rwds_oe,
+         hb_rwds_in_i         => hr_rwds_in_i
       ); -- i_hyperram_ctrl
 
 

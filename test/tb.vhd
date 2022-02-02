@@ -11,7 +11,7 @@ end entity tb;
 architecture simulation of tb is
 
    -- Testbench signals
-   constant C_CLK_PERIOD : time := 20 ns;     -- 100 MHz
+   constant C_CLK_PERIOD : time := 10 ns;     -- 100 MHz
    constant C_DELAY      : time := 2 ns;
    signal stop_test      : std_logic := '0';
 

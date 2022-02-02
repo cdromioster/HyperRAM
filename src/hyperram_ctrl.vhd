@@ -30,7 +30,8 @@ entity hyperram_ctrl is
       hb_dq_oe_o          : out std_logic;
       hb_dq_ie_i          : in  std_logic;
       hb_rwds_ddr_out_o   : out std_logic_vector(1 downto 0);
-      hb_rwds_oe_o        : out std_logic
+      hb_rwds_oe_o        : out std_logic;
+      hb_rwds_in_i        : in  std_logic
    );
 end entity hyperram_ctrl;
 
@@ -79,6 +80,7 @@ architecture synthesis of hyperram_ctrl is
    attribute mark_debug of hb_dq_ie_i        : signal is C_DEBUG_MODE;
    attribute mark_debug of hb_rwds_ddr_out_o : signal is C_DEBUG_MODE;
    attribute mark_debug of hb_rwds_oe_o      : signal is C_DEBUG_MODE;
+   attribute mark_debug of hb_rwds_in_i      : signal is C_DEBUG_MODE;
    attribute mark_debug of state             : signal is C_DEBUG_MODE;
 
 begin
@@ -129,8 +131,13 @@ begin
                   hb_ck_ddr_o <= "10";
                   ca_count    <= ca_count - 1;
                else
-                  latency_count <= 2*G_LATENCY - 2;
+                  if hb_rwds_in_i = '1' then
+                     latency_count <= 2*G_LATENCY - 2;
+                  else
+                     latency_count <= G_LATENCY - 2;
+                  end if;
                   if config = '1' then
+                     recovery_count <= 3;
                      state <= RECOVERY_ST;
                   else
                      state <= LATENCY_ST;

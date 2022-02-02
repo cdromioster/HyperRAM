@@ -58,18 +58,23 @@ architecture synthesis of hyperram_io is
    signal hr_dq_in        : std_logic_vector(7 downto 0);
 
    constant C_DEBUG_MODE                : boolean := false;
-   attribute mark_debug                 : boolean;
-   attribute mark_debug of rwds_in_x2_d : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_x2_d   : signal is C_DEBUG_MODE;
-   attribute mark_debug of rwds_in_x2   : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_x2     : signal is C_DEBUG_MODE;
-   attribute mark_debug of csn_in_x2    : signal is C_DEBUG_MODE;
+   attribute mark_debug                  : boolean;
+   attribute mark_debug of rwds_in_x2_d  : signal is C_DEBUG_MODE;
+   attribute mark_debug of dq_in_x2_d    : signal is C_DEBUG_MODE;
+   attribute mark_debug of rwds_in_x2    : signal is C_DEBUG_MODE;
+   attribute mark_debug of dq_in_x2      : signal is C_DEBUG_MODE;
+   attribute mark_debug of csn_in_x2     : signal is C_DEBUG_MODE;
+   attribute mark_debug of hr_resetn_o   : signal is C_DEBUG_MODE;
+   attribute mark_debug of hr_csn_o      : signal is C_DEBUG_MODE;
+   attribute mark_debug of hr_ck_o       : signal is C_DEBUG_MODE;
+   attribute mark_debug of hr_rwds_out_o : signal is C_DEBUG_MODE;
+   attribute mark_debug of hr_dq_out_o   : signal is C_DEBUG_MODE;
 
-   attribute mark_debug of rwds_in_d    : signal is C_DEBUG_MODE;
-   attribute mark_debug of rwds_in      : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_d      : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in        : signal is C_DEBUG_MODE;
-   attribute mark_debug of hr_dq_in     : signal is C_DEBUG_MODE;
+   attribute mark_debug of rwds_in_d     : signal is C_DEBUG_MODE;
+   attribute mark_debug of rwds_in       : signal is C_DEBUG_MODE;
+   attribute mark_debug of dq_in_d       : signal is C_DEBUG_MODE;
+   attribute mark_debug of dq_in         : signal is C_DEBUG_MODE;
+   attribute mark_debug of hr_dq_in      : signal is C_DEBUG_MODE;
 
 begin
 
