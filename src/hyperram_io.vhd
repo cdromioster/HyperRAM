@@ -42,21 +42,26 @@ end entity hyperram_io;
 architecture synthesis of hyperram_io is
 
    -- Output generation
-   signal rwds_ddr_out_x2 : std_logic_vector(1 downto 0);
-   signal dq_ddr_out_x2   : std_logic_vector(15 downto 0);
+   signal rwds_ddr_out_x2  : std_logic_vector(1 downto 0);
+   signal dq_ddr_out_x2    : std_logic_vector(15 downto 0);
 
    -- Input sampling
-   signal csn_in_x2       : std_logic;
-   signal rwds_in_x2      : std_logic;
-   signal dq_in_x2        : std_logic_vector(7 downto 0);
+   signal csn_in_x2        : std_logic;
+   signal rwds_in_x2       : std_logic;
+   signal dq_in_x2         : std_logic_vector(7 downto 0);
 
-   signal hr_rwds_in_x2   : std_logic;
-   signal ctrl_dq_ie_hold : std_logic;
+   signal hr_rwds_in_x2    : std_logic;
+   signal ctrl_dq_ie_hold  : std_logic;
 
-   signal csn_in_x4       : std_logic;
-   signal ck_in_x4        : std_logic;
-   signal rwds_in_x4      : std_logic;
-   signal dq_in_x4        : std_logic_vector(7 downto 0);
+   signal csn_in_x4        : std_logic;
+   signal ck_in_x4         : std_logic;
+   signal rwds_in_x4       : std_logic;
+   signal dq_in_x4         : std_logic_vector(7 downto 0);
+
+   signal hr_rwds_in_x4    : std_logic;
+   signal hr_dq_ddr_in_x4  : std_logic_vector(15 downto 0);
+   signal hr_dq_ie_x4      : std_logic;
+   signal hr_dq_ie_hold_x4 : std_logic;
 
    constant C_DEBUG_MODE                 : boolean := false;
    attribute mark_debug                  : boolean;
@@ -156,24 +161,37 @@ begin
       end if;
    end process p_pipeline;
 
-   p_input : process (clk_x2_i)
+   p_input_x4 : process (clk_x4_i)
+   begin
+      if rising_edge(clk_x4_i) then
+         hr_dq_ie_x4      <= hr_dq_ie_hold_x4;
+         hr_dq_ie_hold_x4 <= '0';
+
+         hr_rwds_in_x4 <= hr_rwds_in_i;
+         if hr_rwds_in_x4 = '0' and hr_rwds_in_i = '1' then
+            hr_dq_ddr_in_x4(15 downto 8) <= hr_dq_in_i;
+         end if;
+         if hr_rwds_in_x4 = '1' and hr_rwds_in_i = '0' then
+            hr_dq_ddr_in_x4(7 downto 0) <= hr_dq_in_i;
+            hr_dq_ie_x4      <= '1';
+            hr_dq_ie_hold_x4 <= '1';
+         end if;
+      end if;
+   end process p_input_x4;
+
+   p_input_x2 : process (clk_x2_i)
    begin
       if rising_edge(clk_x2_i) then
-         hr_rwds_in_x2   <= hr_rwds_in_i;
          ctrl_dq_ie_o    <= ctrl_dq_ie_hold;
          ctrl_dq_ie_hold <= '0';
 
-         if hr_rwds_in_i = '1' then
-            ctrl_dq_ddr_in_o(15 downto 8) <= hr_dq_in_i;
-         end if;
-
-         if hr_rwds_in_x2 = '1' then
-            ctrl_dq_ddr_in_o(7 downto 0) <= hr_dq_in_i;
+         if hr_dq_ie_x4 = '1' then
+            ctrl_dq_ddr_in_o <= hr_dq_ddr_in_x4;
             ctrl_dq_ie_o    <= '1';
             ctrl_dq_ie_hold <= '1';
          end if;
       end if;
-   end process p_input;
+   end process p_input_x2;
 
 end architecture synthesis;
 

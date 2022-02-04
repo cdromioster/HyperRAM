@@ -11,15 +11,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="151287300fs"></ZoomStartTime>
-      <ZoomEndTime time="151326201fs"></ZoomEndTime>
-      <Cursor1Time time="151337500fs"></Cursor1Time>
+      <ZoomStartTime time="151321000fs"></ZoomStartTime>
+      <ZoomEndTime time="151376251fs"></ZoomEndTime>
+      <Cursor1Time time="151350000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="280"></NameColumnWidth>
-      <ValueColumnWidth column_width="132"></ValueColumnWidth>
+      <ValueColumnWidth column_width="127"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="27" />
+   <WVObjectSize size="30" />
    <wvobject type="logic" fp_name="/tb/stop_test">
       <obj_property name="ElementShortName">stop_test</obj_property>
       <obj_property name="ObjectShortName">stop_test</obj_property>
@@ -291,5 +291,17 @@
    <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/rwds_in_x4">
       <obj_property name="ElementShortName">rwds_in_x4</obj_property>
       <obj_property name="ObjectShortName">rwds_in_x4</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/hr_dq_ddr_in_x4">
+      <obj_property name="ElementShortName">hr_dq_ddr_in_x4[15:0]</obj_property>
+      <obj_property name="ObjectShortName">hr_dq_ddr_in_x4[15:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/hr_dq_ie_hold_x4">
+      <obj_property name="ElementShortName">hr_dq_ie_hold_x4</obj_property>
+      <obj_property name="ObjectShortName">hr_dq_ie_hold_x4</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/hr_dq_ie_x4">
+      <obj_property name="ElementShortName">hr_dq_ie_x4</obj_property>
+      <obj_property name="ObjectShortName">hr_dq_ie_x4</obj_property>
    </wvobject>
 </wave_config>
