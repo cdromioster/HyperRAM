@@ -12,7 +12,7 @@ architecture simulation of tb is
 
    -- Testbench signals
    constant C_CLK_PERIOD : time := 10 ns;     -- 100 MHz
-   constant C_DELAY      : time := 1 ns;
+   constant C_DELAY      : time := 2 ns;
    signal stop_test      : std_logic := '0';
 
    signal clk            : std_logic;
