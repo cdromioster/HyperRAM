@@ -12,7 +12,7 @@ architecture simulation of tb is
 
    -- Testbench signals
    constant C_CLK_PERIOD    : time := 10 ns;     -- 100 MHz
-   constant C_DELAY         : time := 2 ns;
+   constant C_DELAY         : time := 1 ns;
    signal stop_test         : std_logic := '0';
 
    signal clk               : std_logic;
@@ -187,9 +187,9 @@ begin
    -- Connect controller to device
    ---------------------------------------------------------
 
-   hr_resetn <= sys_resetn;
-   hr_csn    <= sys_csn;
-   hr_ck     <= sys_ck;
+   hr_resetn <= sys_resetn after C_DELAY;
+   hr_csn    <= sys_csn    after C_DELAY;
+   hr_ck     <= sys_ck     after C_DELAY;
 
    i_wiredelay2_rwds : entity work.wiredelay2
       generic map (

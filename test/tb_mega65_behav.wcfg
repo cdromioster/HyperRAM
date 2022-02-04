@@ -13,15 +13,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="285577780fs"></ZoomEndTime>
-      <Cursor1Time time="1000000fs"></Cursor1Time>
+      <ZoomStartTime time="151887000fs"></ZoomStartTime>
+      <ZoomEndTime time="152130601fs"></ZoomEndTime>
+      <Cursor1Time time="152040000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="225"></NameColumnWidth>
+      <NameColumnWidth column_width="215"></NameColumnWidth>
       <ValueColumnWidth column_width="79"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="16" />
+   <WVObjectSize size="21" />
    <wvobject type="logic" fp_name="/tb/stop_test">
       <obj_property name="ElementShortName">stop_test</obj_property>
       <obj_property name="ObjectShortName">stop_test</obj_property>
@@ -194,5 +194,33 @@
          <obj_property name="ElementShortName">busy</obj_property>
          <obj_property name="ObjectShortName">busy</obj_property>
       </wvobject>
+      <wvobject type="array" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x2_byte_phase">
+         <obj_property name="ElementShortName">x2_byte_phase[5:0]</obj_property>
+         <obj_property name="ObjectShortName">x2_byte_phase[5:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb/i_hyperram_wrapper/i_hyperram_mega65/x2_pause_phase">
+         <obj_property name="ElementShortName">x2_pause_phase</obj_property>
+         <obj_property name="ObjectShortName">x2_pause_phase</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/hr_resetn">
+      <obj_property name="ElementShortName">hr_resetn</obj_property>
+      <obj_property name="ObjectShortName">hr_resetn</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/hr_csn">
+      <obj_property name="ElementShortName">hr_csn</obj_property>
+      <obj_property name="ObjectShortName">hr_csn</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/hr_ck">
+      <obj_property name="ElementShortName">hr_ck</obj_property>
+      <obj_property name="ObjectShortName">hr_ck</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/hr_rwds">
+      <obj_property name="ElementShortName">hr_rwds</obj_property>
+      <obj_property name="ObjectShortName">hr_rwds</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/hr_dq">
+      <obj_property name="ElementShortName">hr_dq[7:0]</obj_property>
+      <obj_property name="ObjectShortName">hr_dq[7:0]</obj_property>
    </wvobject>
 </wave_config>
