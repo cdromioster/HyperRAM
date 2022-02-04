@@ -11,15 +11,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="239443824fs"></ZoomEndTime>
-      <Cursor1Time time="181000000fs"></Cursor1Time>
+      <ZoomStartTime time="151287300fs"></ZoomStartTime>
+      <ZoomEndTime time="151326201fs"></ZoomEndTime>
+      <Cursor1Time time="151337500fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="280"></NameColumnWidth>
-      <ValueColumnWidth column_width="142"></ValueColumnWidth>
+      <ValueColumnWidth column_width="132"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="19" />
+   <WVObjectSize size="27" />
    <wvobject type="logic" fp_name="/tb/stop_test">
       <obj_property name="ElementShortName">stop_test</obj_property>
       <obj_property name="ObjectShortName">stop_test</obj_property>
@@ -51,7 +51,6 @@
    <wvobject type="group" fp_name="group82">
       <obj_property name="label">HyperRAM interface</obj_property>
       <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
       <wvobject type="group" fp_name="group225">
          <obj_property name="label">AVM</obj_property>
          <obj_property name="DisplayName">label</obj_property>
@@ -184,7 +183,6 @@
    <wvobject type="group" fp_name="group59">
       <obj_property name="label">Config</obj_property>
       <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
       <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_config/s_avm_write_i">
          <obj_property name="ElementShortName">s_avm_write_i</obj_property>
          <obj_property name="ObjectShortName">s_avm_write_i</obj_property>
@@ -261,5 +259,37 @@
          <obj_property name="ElementShortName">state</obj_property>
          <obj_property name="ObjectShortName">state</obj_property>
       </wvobject>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/hr_rwds_in_x2">
+      <obj_property name="ElementShortName">hr_rwds_in_x2</obj_property>
+      <obj_property name="ObjectShortName">hr_rwds_in_x2</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/ctrl_dq_ie_hold">
+      <obj_property name="ElementShortName">ctrl_dq_ie_hold</obj_property>
+      <obj_property name="ObjectShortName">ctrl_dq_ie_hold</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/ctrl_dq_ie_o">
+      <obj_property name="ElementShortName">ctrl_dq_ie_o</obj_property>
+      <obj_property name="ObjectShortName">ctrl_dq_ie_o</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/ctrl_dq_ddr_in_o">
+      <obj_property name="ElementShortName">ctrl_dq_ddr_in_o[15:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_dq_ddr_in_o[15:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/ck_in_x4">
+      <obj_property name="ElementShortName">ck_in_x4</obj_property>
+      <obj_property name="ObjectShortName">ck_in_x4</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/csn_in_x4">
+      <obj_property name="ElementShortName">csn_in_x4</obj_property>
+      <obj_property name="ObjectShortName">csn_in_x4</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/dq_in_x4">
+      <obj_property name="ElementShortName">dq_in_x4[7:0]</obj_property>
+      <obj_property name="ObjectShortName">dq_in_x4[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/i_system/i_hyperram/i_hyperram_io/rwds_in_x4">
+      <obj_property name="ElementShortName">rwds_in_x4</obj_property>
+      <obj_property name="ObjectShortName">rwds_in_x4</obj_property>
    </wvobject>
 </wave_config>

@@ -12,6 +12,7 @@ entity hyperram_io is
       clk_i               : in  std_logic;
       clk_x2_i            : in  std_logic; -- Double frequency.
       clk_x2_del_i        : in  std_logic; -- Double frequency, phase shifted
+      clk_x4_i            : in  std_logic; -- Quadruple frequency.
       rst_i               : in  std_logic;
 
       -- Connect to HyperRAM controller
@@ -52,6 +53,11 @@ architecture synthesis of hyperram_io is
    signal hr_rwds_in_x2   : std_logic;
    signal ctrl_dq_ie_hold : std_logic;
 
+   signal csn_in_x4       : std_logic;
+   signal ck_in_x4        : std_logic;
+   signal rwds_in_x4      : std_logic;
+   signal dq_in_x4        : std_logic_vector(7 downto 0);
+
    constant C_DEBUG_MODE                 : boolean := false;
    attribute mark_debug                  : boolean;
    attribute mark_debug of rwds_in_x2    : signal is C_DEBUG_MODE;
@@ -62,6 +68,11 @@ architecture synthesis of hyperram_io is
    attribute mark_debug of hr_ck_o       : signal is C_DEBUG_MODE;
    attribute mark_debug of hr_rwds_out_o : signal is C_DEBUG_MODE;
    attribute mark_debug of hr_dq_out_o   : signal is C_DEBUG_MODE;
+
+   attribute mark_debug of csn_in_x4     : signal is C_DEBUG_MODE;
+   attribute mark_debug of ck_in_x4      : signal is C_DEBUG_MODE;
+   attribute mark_debug of rwds_in_x4    : signal is C_DEBUG_MODE;
+   attribute mark_debug of dq_in_x4      : signal is C_DEBUG_MODE;
 
 begin
 
@@ -115,6 +126,21 @@ begin
          hr_rwds_oe_o <= ctrl_rwds_oe_i;
       end if;
    end process p_delay;
+
+
+   ------------------------------------------------
+   -- Debug
+   ------------------------------------------------
+
+   p_debug : process (clk_x4_i)
+   begin
+      if rising_edge(clk_x4_i) then
+         csn_in_x4  <= hr_csn_o;
+         ck_in_x4   <= hr_ck_o;
+         rwds_in_x4 <= hr_rwds_in_i;
+         dq_in_x4   <= hr_dq_in_i;
+      end if;
+   end process p_debug;
 
 
    ------------------------------------------------

@@ -10,6 +10,7 @@ entity system is
       clk_i         : in  std_logic;
       clk_x2_i      : in  std_logic;
       clk_x2_del_i  : in  std_logic;
+      clk_x4_i      : in  std_logic;
       rst_i         : in  std_logic;
       start_i       : in  std_logic;
 
@@ -85,6 +86,7 @@ begin
          clk_i               => clk_i,
          clk_x2_i            => clk_x2_i,
          clk_x2_del_i        => clk_x2_del_i,
+         clk_x4_i            => clk_x4_i,
          rst_i               => rst_i,
          avm_write_i         => avm_write,
          avm_read_i          => avm_read,

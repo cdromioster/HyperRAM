@@ -12,12 +12,13 @@ architecture simulation of tb is
 
    -- Testbench signals
    constant C_CLK_PERIOD : time := 10 ns;     -- 100 MHz
-   constant C_DELAY      : time := 2 ns;
+   constant C_DELAY      : time := 1 ns;
    signal stop_test      : std_logic := '0';
 
    signal clk            : std_logic;
    signal clk_x2         : std_logic;
    signal clk_x2_del     : std_logic;
+   signal clk_x4         : std_logic;
    signal rst            : std_logic;
    signal led_active     : std_logic;
    signal led_error      : std_logic;
@@ -86,6 +87,17 @@ begin
       wait;
    end process p_clk_x2;
 
+   p_clk_x4 : process
+   begin
+      while stop_test = '0' loop
+         clk_x4 <= '1';
+         wait for C_CLK_PERIOD/8;
+         clk_x4 <= '0';
+         wait for C_CLK_PERIOD/8;
+      end loop;
+      wait;
+   end process p_clk_x4;
+
    p_clk_x2_del : process
    begin
       wait for C_CLK_PERIOD/4; -- 180 degrees
@@ -133,6 +145,7 @@ begin
          clk_i         => clk,
          clk_x2_i      => clk_x2,
          clk_x2_del_i  => clk_x2_del,
+         clk_x4_i      => clk_x4,
          rst_i         => rst,
          start_i       => start,
          hr_resetn_o   => sys_resetn,

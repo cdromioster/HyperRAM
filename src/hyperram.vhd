@@ -19,6 +19,7 @@ entity hyperram is
       clk_i               : in  std_logic; -- Main clock
       clk_x2_i            : in  std_logic; -- Physical I/O only
       clk_x2_del_i        : in  std_logic; -- Double frequency, phase shifted
+      clk_x4_i            : in  std_logic; -- Physical I/O only
       rst_i               : in  std_logic;
 
       -- Avalon Memory Map
@@ -145,6 +146,7 @@ begin
          clk_i               => clk_i,
          clk_x2_i            => clk_x2_i,
          clk_x2_del_i        => clk_x2_del_i,
+         clk_x4_i            => clk_x4_i,
          rst_i               => rst_i,
          ctrl_rstn_i         => ctrl_rstn,
          ctrl_ck_ddr_i       => ctrl_ck_ddr,
