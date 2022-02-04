@@ -69,43 +69,13 @@ set_false_path -from [get_ports kb_io2]
 # HyperRAM timing
 #############################################################################################################
 
-set hr_freq 10
-set hr_dq_tis 1.0
-set hr_dq_tih -1.0
-set hr_dq_tdss 0.8
-set hr_dq_tdsh -0.8
-
-create_generated_clock -name hr_ck \
-   -source [get_pins {i_clk/i_clk_x2/CLKOUT2}] \
-   -divide_by 2 -multiply_by 1 -duty_cycle 50.00 [get_ports hr_ck]
-create_clock -name hr_rwds_clk  -period $hr_freq [get_ports hr_rwds]
-create_clock -name hr_rwds_virt -period $hr_freq
-
-# Outputs
-set_output_delay -clock [get_clocks hr_ck]             -max $hr_dq_tis [get_ports {hr_csn hr_rwds hr_dq[*]}]
-set_output_delay -clock [get_clocks hr_ck]             -min $hr_dq_tih [get_ports {hr_csn hr_rwds hr_dq[*]}]
-set_output_delay -clock [get_clocks hr_ck] -clock_fall -max $hr_dq_tis [get_ports {hr_csn hr_rwds hr_dq[*]}] -add_delay
-set_output_delay -clock [get_clocks hr_ck] -clock_fall -min $hr_dq_tih [get_ports {hr_csn hr_rwds hr_dq[*]}] -add_delay
-set_false_path  -from [get_clocks hr_rwds_clk] -to [get_clocks hr_ck]
-set_false_path  -to [get_ports hr_resetn]
-
-# Inputs
-set_false_path -fall_from [get_clocks hr_rwds_virt] -rise_to [get_clocks hr_rwds_clk] -setup
-set_false_path -fall_from [get_clocks hr_rwds_virt] -fall_to [get_clocks hr_rwds_clk] -hold
-set_false_path -rise_from [get_clocks hr_rwds_virt] -fall_to [get_clocks hr_rwds_clk] -setup
-set_false_path -rise_from [get_clocks hr_rwds_virt] -rise_to [get_clocks hr_rwds_clk] -hold
-
-set_multicycle_path -setup -end -rise_from [get_clocks hr_rwds_virt] -rise_to [get_clocks hr_rwds_clk] 0
-set_multicycle_path -setup -end -fall_from [get_clocks hr_rwds_virt] -fall_to [get_clocks hr_rwds_clk] 0
-
-set_input_delay -clock [get_clocks hr_rwds_virt]             -max $hr_dq_tdss [get_ports {hr_dq[*]}]
-set_input_delay -clock [get_clocks hr_rwds_virt]             -min $hr_dq_tdsh [get_ports {hr_dq[*]}]
-set_input_delay -clock [get_clocks hr_rwds_virt] -clock_fall -max $hr_dq_tdss [get_ports {hr_dq[*]}] -add_delay
-set_input_delay -clock [get_clocks hr_rwds_virt] -clock_fall -min $hr_dq_tdsh [get_ports {hr_dq[*]}] -add_delay
-
-set_max_delay  -from [get_clocks hr_rwds_clk] -to [get_clocks clk_x1]      $hr_freq
-set_max_delay  -from [get_clocks clk_x1]      -to [get_clocks hr_rwds_clk] $hr_freq
-
+set hr0_dq_ports    [get_ports hr_dq[*]]
+# Set 6ns max delay to/from various HyperRAM pins
+# (But add 17ns extra, because of weird ways Vivado calculates the apparent latency)
+set_max_delay -from [get_clocks clk_x2] -to   ${hr0_dq_ports}     23
+set_max_delay -to   [get_clocks clk_x2] -from ${hr0_dq_ports}     23
+set_max_delay -from [get_clocks clk_x2] -to   [get_ports hr_rwds] 23
+set_max_delay -to   [get_clocks clk_x2] -from [get_ports hr_rwds] 23
 
 
 

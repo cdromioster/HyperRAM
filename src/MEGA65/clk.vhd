@@ -52,7 +52,7 @@ begin
          CLKOUT1_DUTY_CYCLE   => 0.500,
          CLKOUT1_USE_FINE_PS  => FALSE,
          CLKOUT2_DIVIDE       => 5,          -- 200 MHz phase shifted
-         CLKOUT2_PHASE        => 261.000,    -- This is carefully tuned by trial-and-error
+         CLKOUT2_PHASE        => 180.000,    -- This is carefully tuned by trial-and-error
                                              -- until no timing violations.
          CLKOUT2_DUTY_CYCLE   => 0.500,
          CLKOUT2_USE_FINE_PS  => FALSE,
