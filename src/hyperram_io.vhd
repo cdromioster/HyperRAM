@@ -74,15 +74,6 @@ architecture synthesis of hyperram_io is
    attribute mark_debug of hr_rwds_out_o    : signal is C_DEBUG_MODE;
    attribute mark_debug of hr_dq_out_o      : signal is C_DEBUG_MODE;
 
-   attribute mark_debug of csn_in_x4        : signal is C_DEBUG_MODE;
-   attribute mark_debug of ck_in_x4         : signal is C_DEBUG_MODE;
-   attribute mark_debug of rwds_in_x4       : signal is C_DEBUG_MODE;
-   attribute mark_debug of dq_in_x4         : signal is C_DEBUG_MODE;
-   attribute mark_debug of hr_rwds_in_x4    : signal is C_DEBUG_MODE;
-   attribute mark_debug of hr_dq_ddr_in_x4  : signal is C_DEBUG_MODE;
-   attribute mark_debug of hr_dq_ie_x4      : signal is C_DEBUG_MODE;
-   attribute mark_debug of hr_dq_ie_hold_x4 : signal is C_DEBUG_MODE;
-
 begin
 
    hr_csn_o    <= ctrl_csn_i;
