@@ -45,29 +45,26 @@ architecture synthesis of hyperram_io is
    signal rwds_ddr_out_x2  : std_logic_vector(1 downto 0);
    signal dq_ddr_out_x2    : std_logic_vector(15 downto 0);
 
-   -- Input sampling
+   -- Debug
    signal csn_in_x2        : std_logic;
    signal rwds_in_x2       : std_logic;
    signal dq_in_x2         : std_logic_vector(7 downto 0);
 
-   signal hr_rwds_in_x2    : std_logic;
-   signal ctrl_dq_ie_hold  : std_logic;
-
-   signal csn_in_x4        : std_logic;
-   signal ck_in_x4         : std_logic;
-   signal rwds_in_x4       : std_logic;
-   signal dq_in_x4         : std_logic_vector(7 downto 0);
-
+   -- Input sampling
    signal hr_rwds_in_x4    : std_logic;
    signal hr_dq_ddr_in_x4  : std_logic_vector(15 downto 0);
    signal hr_dq_ie_x4      : std_logic;
    signal hr_dq_ie_hold_x4 : std_logic;
+
+   signal ctrl_dq_ie_hold  : std_logic;
 
    constant C_DEBUG_MODE                    : boolean := false;
    attribute mark_debug                     : boolean;
    attribute mark_debug of rwds_in_x2       : signal is C_DEBUG_MODE;
    attribute mark_debug of dq_in_x2         : signal is C_DEBUG_MODE;
    attribute mark_debug of csn_in_x2        : signal is C_DEBUG_MODE;
+   attribute mark_debug of ctrl_dq_ie_o     : signal is C_DEBUG_MODE;
+   attribute mark_debug of ctrl_dq_ie_hold  : signal is C_DEBUG_MODE;
    attribute mark_debug of hr_resetn_o      : signal is C_DEBUG_MODE;
    attribute mark_debug of hr_csn_o         : signal is C_DEBUG_MODE;
    attribute mark_debug of hr_ck_o          : signal is C_DEBUG_MODE;
@@ -132,29 +129,19 @@ begin
    -- Debug
    ------------------------------------------------
 
-   p_debug : process (clk_x4_i)
-   begin
-      if rising_edge(clk_x4_i) then
-         csn_in_x4  <= hr_csn_o;
-         ck_in_x4   <= hr_ck_o;
-         rwds_in_x4 <= hr_rwds_in_i;
-         dq_in_x4   <= hr_dq_in_i;
-      end if;
-   end process p_debug;
-
-
-   ------------------------------------------------
-   -- Input sampling
-   ------------------------------------------------
-
-   p_pipeline : process (clk_x2_i)
+   p_debug_x2 : process (clk_x2_i)
    begin
       if rising_edge(clk_x2_i) then
          csn_in_x2  <= hr_csn_o;
          rwds_in_x2 <= hr_rwds_in_i;
          dq_in_x2   <= hr_dq_in_i;
       end if;
-   end process p_pipeline;
+   end process p_debug_x2;
+
+
+   ------------------------------------------------
+   -- Input sampling
+   ------------------------------------------------
 
    p_input_x4 : process (clk_x4_i)
    begin
