@@ -82,6 +82,15 @@ architecture synthesis of hyperram_ctrl is
    attribute mark_debug of hb_rwds_oe_o      : signal is C_DEBUG_MODE;
    attribute mark_debug of hb_rwds_in_i      : signal is C_DEBUG_MODE;
    attribute mark_debug of state             : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_write_i         : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_read_i          : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_address_i       : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_writedata_i     : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_byteenable_i    : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_burstcount_i    : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_readdata_o      : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_readdatavalid_o : signal is C_DEBUG_MODE;
+   attribute mark_debug of avm_waitrequest_o   : signal is C_DEBUG_MODE;
 
 begin
 

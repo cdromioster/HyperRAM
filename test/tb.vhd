@@ -23,6 +23,7 @@ architecture simulation of tb is
    signal led_active     : std_logic;
    signal led_error      : std_logic;
    signal start          : std_logic;
+   signal start_ready    : std_logic;
 
    signal sys_resetn     : std_logic;
    signal sys_csn        : std_logic;
@@ -120,14 +121,14 @@ begin
       wait;
    end process p_rst;
 
+   start_ready <= '0', '1' after 160 us;
+
    p_start : process (clk)
    begin
       if rising_edge(clk) then
+         start <= start_ready;
          if led_active = '1' then
             start <= '0';
-         end if;
-         if rst = '1' then
-            start <= '1';
          end if;
       end if;
    end process p_start;
