@@ -121,7 +121,16 @@ begin
       wait;
    end process p_rst;
 
-   start_ready <= '0', '1' after 160 us;
+   p_start_ready : process
+   begin
+      start_ready <= '0';
+      wait for 160 us;
+      start_ready <= '1';
+      wait until led_active = '1';
+      start_ready <= '0';
+      wait;
+   end process p_start_ready;
+
 
    p_start : process (clk)
    begin

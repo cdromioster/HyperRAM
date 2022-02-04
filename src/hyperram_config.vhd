@@ -56,20 +56,50 @@ architecture synthesis of hyperram_config is
 
    signal init_counter : integer range 0 to C_INIT_DELAY;
 
+   signal cfg_readdata      : std_logic_vector(15 downto 0);
+   signal cfg_readdatavalid : std_logic;
+   signal cfg_waitrequest   : std_logic;
+   signal cfg_write         : std_logic;
+   signal cfg_read          : std_logic;
+   signal cfg_address       : std_logic_vector(31 downto 0);
+   signal cfg_writedata     : std_logic_vector(15 downto 0);
+   signal cfg_byteenable    : std_logic_vector(1 downto 0);
+   signal cfg_burstcount    : std_logic_vector(7 downto 0);
+
+   constant C_DEBUG_MODE                         : boolean := false;
+   attribute mark_debug                          : boolean;
+   attribute mark_debug of s_avm_write_i         : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_read_i          : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_address_i       : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_writedata_i     : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_byteenable_i    : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_burstcount_i    : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_readdata_o      : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_readdatavalid_o : signal is C_DEBUG_MODE;
+   attribute mark_debug of s_avm_waitrequest_o   : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_write_o         : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_read_o          : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_address_o       : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_writedata_o     : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_byteenable_o    : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_burstcount_o    : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_readdata_i      : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_readdatavalid_i : signal is C_DEBUG_MODE;
+   attribute mark_debug of m_avm_waitrequest_i   : signal is C_DEBUG_MODE;
+   attribute mark_debug of state                 : signal is C_DEBUG_MODE;
+
 begin
 
    p_fsm : process (clk_i)
    begin
       if rising_edge(clk_i) then
          if m_avm_waitrequest_i = '0' then
-            m_avm_write_o <= '0';
-            m_avm_read_o  <= '0';
+            cfg_write <= '0';
+            cfg_read  <= '0';
          end if;
-         s_avm_readdatavalid_o <= '0';
 
          case state is 
             when INIT_ST =>
-               s_avm_waitrequest_o <= '1';
                if init_counter > 0 then
                   init_counter <= init_counter - 1;
                else
@@ -78,48 +108,49 @@ begin
                end if;
 
             when CONFIG_ST =>
-               s_avm_waitrequest_o <= '1';
                -- Write to configuration register 0
-               m_avm_write_o       <= '1';
-               m_avm_read_o        <= '0';
-               m_avm_address_o     <= (others => '0');
-               m_avm_address_o(18 downto 11) <= X"01";
-               m_avm_address_o(31) <= '1';
-               m_avm_writedata_o(R_C0_DPD)     <= '1';    -- normal
-               m_avm_writedata_o(R_C0_DRIVE)   <= "111";  -- 19 ohms
-               m_avm_writedata_o(R_C0_RESERCED)<= "1111";
-               m_avm_writedata_o(R_C0_LATENCY) <= std_logic_vector(to_unsigned(G_LATENCY, 4) - 5);
-               m_avm_writedata_o(R_C0_FIXED)   <= '0';    -- variable
-               m_avm_writedata_o(R_C0_HYBRID)  <= '1';    -- legacy
-               m_avm_writedata_o(R_C0_BURST)   <= "10";   -- 16 bytes
-               m_avm_byteenable_o  <= "11";
-               m_avm_burstcount_o  <= X"01";
+               cfg_write       <= '1';
+               cfg_read        <= '0';
+               cfg_address     <= (others => '0');
+               cfg_address(18 downto 11) <= X"01";
+               cfg_address(31) <= '1';
+               cfg_writedata(R_C0_DPD)     <= '1';    -- normal
+               cfg_writedata(R_C0_DRIVE)   <= "111";  -- 19 ohms
+               cfg_writedata(R_C0_RESERCED)<= "1111";
+               cfg_writedata(R_C0_LATENCY) <= std_logic_vector(to_unsigned(G_LATENCY, 4) - 5);
+               cfg_writedata(R_C0_FIXED)   <= '0';    -- variable
+               cfg_writedata(R_C0_HYBRID)  <= '1';    -- legacy
+               cfg_writedata(R_C0_BURST)   <= "10";   -- 16 bytes
+               cfg_byteenable  <= "11";
+               cfg_burstcount  <= X"01";
 
-               if m_avm_write_o = '1' and m_avm_waitrequest_i = '0' then
+               if cfg_write = '1' and m_avm_waitrequest_i = '0' then
                   state <= READY_ST;
                end if;
 
             when READY_ST =>
-               m_avm_write_o         <= s_avm_write_i;
-               m_avm_read_o          <= s_avm_read_i;
-               m_avm_address_o       <= s_avm_address_i;
-               m_avm_writedata_o     <= s_avm_writedata_i;
-               m_avm_byteenable_o    <= s_avm_byteenable_i;
-               m_avm_burstcount_o    <= s_avm_burstcount_i;
-               s_avm_readdata_o      <= m_avm_readdata_i;
-               s_avm_readdatavalid_o <= m_avm_readdatavalid_i;
-               s_avm_waitrequest_o   <= m_avm_waitrequest_i;
+               null;
+
          end case;
 
          if rst_i = '1' then
-            s_avm_waitrequest_o <= '1';
-            m_avm_write_o       <= '0';
-            m_avm_read_o        <= '0';
+            cfg_write           <= '0';
+            cfg_read            <= '0';
             init_counter        <= C_INIT_DELAY;
             state               <= INIT_ST;
          end if;
       end if;
    end process p_fsm;
+
+   m_avm_write_o         <= s_avm_write_i          when state = READY_ST else cfg_write;
+   m_avm_read_o          <= s_avm_read_i           when state = READY_ST else cfg_read;
+   m_avm_address_o       <= s_avm_address_i        when state = READY_ST else cfg_address;
+   m_avm_writedata_o     <= s_avm_writedata_i      when state = READY_ST else cfg_writedata;
+   m_avm_byteenable_o    <= s_avm_byteenable_i     when state = READY_ST else cfg_byteenable;
+   m_avm_burstcount_o    <= s_avm_burstcount_i     when state = READY_ST else cfg_burstcount;
+   s_avm_readdata_o      <= m_avm_readdata_i       when state = READY_ST else (others => '0');
+   s_avm_readdatavalid_o <= m_avm_readdatavalid_i  when state = READY_ST else '0';
+   s_avm_waitrequest_o   <= m_avm_waitrequest_i    when state = READY_ST else '1';
 
 end architecture synthesis;
 
