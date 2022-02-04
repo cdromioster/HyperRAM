@@ -88,7 +88,7 @@ begin
 
    p_clk_x2_del : process
    begin
-      wait for C_CLK_PERIOD/3; -- 240 degrees
+      wait for C_CLK_PERIOD/4; -- 180 degrees
 
       while stop_test = '0' loop
          clk_x2_del <= '1';
@@ -153,12 +153,12 @@ begin
 
 
    ---------------------------------------------------------
-   -- Connect controller to device
+   -- Connect controller to device (with delay)
    ---------------------------------------------------------
 
-   hr_resetn <= sys_resetn;
-   hr_csn    <= sys_csn;
-   hr_ck     <= sys_ck;
+   hr_resetn <= sys_resetn after C_DELAY;
+   hr_csn    <= sys_csn    after C_DELAY;
+   hr_ck     <= sys_ck     after C_DELAY;
 
    i_wiredelay2_rwds : entity work.wiredelay2
       generic map (

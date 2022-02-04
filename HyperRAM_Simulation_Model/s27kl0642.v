@@ -1102,6 +1102,7 @@ module s27kl0642
                         begin
                             DPD_ACT = 1'b1;
                         end
+                        $display("Writing %04h to config0", Data_in);
                         Config_reg0=Data_in;
                     end else if (data_cycle == 2 && ca_in[24] == 1'b1 && ca_in[0] == 1'b1)
                     begin
@@ -1111,6 +1112,7 @@ module s27kl0642
                         end
 
 						REFinterval=1;
+                        $display("Writing %04h to config1", Data_in);
                         Config_reg1[15:2]=Data_in[15:2];
                     end
                 end
