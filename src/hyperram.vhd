@@ -10,13 +10,13 @@ use ieee.numeric_std.all;
 -- The address is word-based, i.e. units of 2 bytes.
 
 -- This module requires two clocks:
--- clk_i    : 100 MHz. This is the main clock used for the Avalon MM interface
+-- clk_x1_i : 100 MHz. This is the main clock used for the Avalon MM interface
 --            as well as controlling the HyperRAM device.
 -- clk_x2_i :_200 MHz. Used for I/O to HyperRAM device.
 
 entity hyperram is
    port (
-      clk_i               : in  std_logic; -- Main clock
+      clk_x1_i            : in  std_logic; -- Main clock
       clk_x2_i            : in  std_logic; -- Physical I/O only
       clk_x2_del_i        : in  std_logic; -- Double frequency, phase shifted
       clk_x4_i            : in  std_logic; -- Physical I/O only
@@ -81,7 +81,7 @@ begin
          G_LATENCY => C_LATENCY
       )
       port map (
-         clk_i                 => clk_i,
+         clk_i                 => clk_x1_i,
          rst_i                 => rst_i,
          s_avm_write_i         => avm_write_i,
          s_avm_read_i          => avm_read_i,
@@ -113,7 +113,7 @@ begin
          G_LATENCY => C_LATENCY
       )
       port map (
-         clk_i                => clk_i,
+         clk_i                => clk_x1_i,
          rst_i                => rst_i,
          avm_write_i          => cfg_write,
          avm_read_i           => cfg_read,
@@ -143,7 +143,7 @@ begin
 
    i_hyperram_io : entity work.hyperram_io
       port map (
-         clk_i               => clk_i,
+         clk_x1_i            => clk_x1_i,
          clk_x2_i            => clk_x2_i,
          clk_x2_del_i        => clk_x2_del_i,
          clk_x4_i            => clk_x4_i,

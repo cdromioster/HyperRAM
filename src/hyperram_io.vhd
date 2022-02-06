@@ -9,7 +9,7 @@ use unisim.vcomponents.all;
 
 entity hyperram_io is
    port (
-      clk_i               : in  std_logic;
+      clk_x1_i            : in  std_logic;
       clk_x2_i            : in  std_logic; -- Double frequency.
       clk_x2_del_i        : in  std_logic; -- Double frequency, phase shifted
       clk_x4_i            : in  std_logic; -- Quadruple frequency.
@@ -118,9 +118,9 @@ begin
       end if;
    end process p_output_dq;
 
-   p_delay : process (clk_i)
+   p_delay : process (clk_x1_i)
    begin
-      if rising_edge(clk_i) then
+      if rising_edge(clk_x1_i) then
          hr_dq_oe_o   <= ctrl_dq_oe_i;
          hr_rwds_oe_o <= ctrl_rwds_oe_i;
       end if;

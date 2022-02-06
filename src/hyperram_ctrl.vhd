@@ -68,7 +68,6 @@ architecture synthesis of hyperram_ctrl is
    subtype  R_CA_RESERVED is natural range 15 downto  3;
    subtype  R_CA_ADDR_LSB is natural range  2 downto  0;
 
-
    constant C_DEBUG_MODE                       : boolean := false;
    attribute mark_debug                        : boolean;
    attribute mark_debug of hb_rstn_o           : signal is C_DEBUG_MODE;

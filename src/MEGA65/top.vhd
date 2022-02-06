@@ -110,7 +110,7 @@ begin
          pixel_clk_o  => video_clk,
          pixel_rst_o  => video_rst,
          pixel_clk5_o => hdmi_clk
-      ); -- i_clk_video
+      ); -- i_clk_mega65
 
    i_clk : entity work.clk
       generic map
@@ -185,7 +185,7 @@ begin
          dest_clk     => kbd_clk,
          dest_out(0)  => led_active,
          dest_out(1)  => led_error
-      ); -- i_cdc
+      ); -- i_cdc_keyboard
 
    i_video : entity work.video
       generic map

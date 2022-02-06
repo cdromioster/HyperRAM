@@ -37,7 +37,7 @@ begin
    -- generate HyperRAM clock.
    -- VCO frequency range for Artix 7 speed grade -1 : 600 MHz - 1200 MHz
    -- f_VCO = f_CLKIN * CLKFBOUT_MULT_F / DIVCLK_DIVIDE   
-   i_clk_x2 : MMCME2_ADV
+   i_clk_hyperram : MMCME2_ADV
       generic map (
          BANDWIDTH            => "OPTIMIZED",
          CLKOUT4_CASCADE      => FALSE,
@@ -99,7 +99,7 @@ begin
          CLKFBSTOPPED        => open,
          PWRDWN              => '0',
          RST                 => not sys_rstn_i
-      ); -- i_clk_x2
+      ); -- i_clk_hyperram
 
 
    -------------------------------------

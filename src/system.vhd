@@ -83,7 +83,7 @@ begin
 
    i_hyperram : entity work.hyperram
       port map (
-         clk_i               => clk_i,
+         clk_x1_i            => clk_i,
          clk_x2_i            => clk_x2_i,
          clk_x2_del_i        => clk_x2_del_i,
          clk_x4_i            => clk_x4_i,
