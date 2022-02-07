@@ -118,33 +118,20 @@ begin
    -- Input sampling
    ------------------------------------------------
 
-   p_pipeline : process (clk_x2_i)
-   begin
-      if rising_edge(clk_x2_i) then
-         csn_in_x2    <= hr_csn_o;
-         rwds_in_x2   <= hr_rwds_in_i;
-         dq_in_x2     <= hr_dq_in_i;
-
-         rwds_in_x2_d <= rwds_in_x2;
-         dq_in_x2_d   <= dq_in_x2;
-      end if;
-   end process p_pipeline;
-
-   p_input : process (clk_x1_i)
+   p_input_rising : process (clk_x1_i)
    begin
       if rising_edge(clk_x1_i) then
-         ctrl_dq_ie_o <= '0';
-         if rwds_in_x2_d = '1' and rwds_in_x2 = '0' then
-            ctrl_dq_ddr_in_o <= dq_in_x2_d & dq_in_x2;
-            ctrl_dq_ie_o     <= '1';
-         end if;
-         if rwds_in_x2_d = '0' and rwds_in_x2 = '1' then
-            ctrl_dq_ddr_in_o <= dq_in_x2 & hr_dq_in_i;
-            ctrl_dq_ie_o     <= '1';
-         end if;
+         ctrl_dq_ddr_in_o(15 downto 8) <= hr_dq_in_i;
+         ctrl_dq_ie_o <= hr_rwds_in_i;
       end if;
-   end process p_input;
+   end process p_input_rising;
 
+   p_input_falling : process (clk_x1_i)
+   begin
+      if falling_edge(clk_x1_i) then
+         ctrl_dq_ddr_in_o(7 downto 0) <= hr_dq_in_i;
+      end if;
+   end process p_input_falling;
 
    ------------------------------------------------
    -- Tri-state buffers
