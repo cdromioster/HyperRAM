@@ -56,6 +56,8 @@ create_generated_clock -name kbd_clk    [get_pins i_clk_mega65/i_clk_mega65/CLKO
 create_generated_clock -name pixel_clk  [get_pins i_clk_mega65/i_clk_mega65/CLKOUT1]
 create_generated_clock -name pixel_clk5 [get_pins i_clk_mega65/i_clk_mega65/CLKOUT2]
 
+create_generated_clock -name hr_ck -source [get_pins i_clk/i_clk_hyperram/CLKOUT2] -divide_by 2 [get_ports hr_ck]
+
 # MEGA65 timing
 set_false_path -from [get_ports reset_n]
 set_false_path   -to [get_ports hdmi_data_p[*]]
