@@ -77,14 +77,11 @@ set tco_max 7.0
 set trce_dly 0.5
 # Subtract 10 instead of introducing multi-cycle path
 # Subtract 5 to account for IDDR falling edge
-set_input_delay -clock [get_clocks {hr_ck}] -add_delay -min [expr $tco_min+$trce_dly-15] [get_ports {hr_dq[*]}]
+set_input_delay -clock [get_clocks {hr_ck}] -add_delay -min [expr $tco_min+$trce_dly]    [get_ports {hr_dq[*]}]
 set_input_delay -clock [get_clocks {hr_ck}] -add_delay -max [expr $tco_max+$trce_dly-15] [get_ports {hr_dq[*]}]
-set_input_delay -clock [get_clocks {hr_ck}] -add_delay -min [expr $tco_min+$trce_dly-15] [get_ports {hr_rwds}]
-set_input_delay -clock [get_clocks {hr_ck}] -add_delay -max [expr $tco_max+$trce_dly-15] [get_ports {hr_rwds}]
 
-#set_false_path -from [get_clocks {hr_ck}] -to [get_clocks {clk_x1}]
-#set_false_path -from [get_clocks {hr_ck}] -to [get_clocks {clk_x2}]
-#report_timing -from [get_ports hr_rwds] -sort_by group
+# For debugging, try one of these:
+#report_timing -from [get_ports hr_rwds]  -sort_by group
 #report_timing -from [get_ports hr_dq[0]] -sort_by group
 
 ## MEGA65 timing
