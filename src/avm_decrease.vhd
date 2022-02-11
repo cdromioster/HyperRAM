@@ -87,8 +87,12 @@ begin
                if m_avm_waitrequest_i = '0' then
                   s_pos <= s_pos + 1;
 
+                  -- Preserve values from previous clock cycle
+                  s_avm_write <= s_avm_write;
+                  s_avm_read  <= s_avm_read;
+
                   if s_pos+2 = C_RATIO then
-                     state <= IDLE_ST;
+                     state       <= IDLE_ST;
                   end if;
                end if;
          end case;

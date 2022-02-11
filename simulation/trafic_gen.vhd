@@ -25,6 +25,7 @@ end entity trafic_gen;
 architecture simulation of trafic_gen is
 
    constant C_DATA_INIT : std_logic_vector(63 downto 0) := X"CAFEBABEDEADBEEF";
+   constant C_WORD_COUNT : integer := G_DATA_SIZE/16; -- 16 bits in each word
 
    signal address : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
    signal data    : std_logic_vector(63 downto 0);
@@ -66,7 +67,7 @@ begin
 
                if avm_write_o = '1' and avm_waitrequest_i = '0' then
                   -- Increment address linearly
-                  address <= std_logic_vector(unsigned(address) + 1);
+                  address <= std_logic_vector(unsigned(address) + C_WORD_COUNT);
 
                   -- The pseudo-random data is generated using a 64-bit maximal-period Galois LFSR,
                   -- see http://users.ece.cmu.edu/~koopman/lfsr/64.txt
@@ -76,7 +77,7 @@ begin
                      data <= (data(62 downto 0) & "0");
                   end if;
 
-                  if signed(address) = -1 then
+                  if signed(address) = -C_WORD_COUNT then
                      data  <= C_DATA_INIT;
                      state <= READING_ST;
                   end if;
@@ -97,7 +98,7 @@ begin
             when VERIFYING_ST =>
                if avm_readdatavalid_i = '1' then
 
-                  address <= std_logic_vector(unsigned(address) + 1);
+                  address <= std_logic_vector(unsigned(address) + C_WORD_COUNT);
                   if data(63) = '1' then
                      data <= (data(62 downto 0) & "0") xor X"000000000000001B";
                   else
@@ -107,10 +108,10 @@ begin
                   if avm_readdata_i /= data(G_DATA_SIZE-1 downto 0) then
                      report "ERROR: Expected " & to_hstring(data(G_DATA_SIZE-1 downto 0)) & ", read " & to_hstring(avm_readdata_i);
 --                     state    <= STOPPED_ST;
-                  elsif signed(address) = -1 then
+                  elsif signed(address) = -C_WORD_COUNT then
                      report "Test stopped";
-                     data     <= C_DATA_INIT;
-                     state    <= STOPPED_ST;
+                     data  <= C_DATA_INIT;
+                     state <= STOPPED_ST;
                   else
                      state <= READING_ST;
                   end if;
