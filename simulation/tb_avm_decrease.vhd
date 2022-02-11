@@ -11,37 +11,48 @@ architecture simulation of tb_avm_decrease is
    constant C_MASTER_DATA_SIZE : integer := 16;
    constant C_ADDRESS_SIZE     : integer := 3;
 
-   signal clk                 : std_logic;
-   signal rst                 : std_logic;
-   signal s_avm_write         : std_logic;
-   signal s_avm_read          : std_logic;
-   signal s_avm_address       : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
-   signal s_avm_writedata     : std_logic_vector(C_SLAVE_DATA_SIZE-1 downto 0);
-   signal s_avm_byteenable    : std_logic_vector(C_SLAVE_DATA_SIZE/8-1 downto 0);
-   signal s_avm_burstcount    : std_logic_vector(7 downto 0);
-   signal s_avm_readdata      : std_logic_vector(C_SLAVE_DATA_SIZE-1 downto 0);
-   signal s_avm_readdatavalid : std_logic;
-   signal s_avm_waitrequest   : std_logic;
+   signal clk                  : std_logic;
+   signal rst                  : std_logic;
 
-   signal m_avm_write         : std_logic;
-   signal m_avm_read          : std_logic;
-   signal m_avm_address       : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
-   signal m_avm_writedata     : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
-   signal m_avm_byteenable    : std_logic_vector(C_MASTER_DATA_SIZE/8-1 downto 0);
-   signal m_avm_burstcount    : std_logic_vector(7 downto 0);
-   signal m_avm_readdata      : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
-   signal m_avm_readdatavalid : std_logic;
-   signal m_avm_waitrequest   : std_logic;
+   signal sp_avm_write         : std_logic;
+   signal sp_avm_read          : std_logic;
+   signal sp_avm_address       : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
+   signal sp_avm_writedata     : std_logic_vector(C_SLAVE_DATA_SIZE-1 downto 0);
+   signal sp_avm_byteenable    : std_logic_vector(C_SLAVE_DATA_SIZE/8-1 downto 0);
+   signal sp_avm_burstcount    : std_logic_vector(7 downto 0);
+   signal sp_avm_readdata      : std_logic_vector(C_SLAVE_DATA_SIZE-1 downto 0);
+   signal sp_avm_readdatavalid : std_logic;
+   signal sp_avm_waitrequest   : std_logic;
 
-   signal p_avm_write         : std_logic;
-   signal p_avm_read          : std_logic;
-   signal p_avm_address       : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
-   signal p_avm_writedata     : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
-   signal p_avm_byteenable    : std_logic_vector(C_MASTER_DATA_SIZE/8-1 downto 0);
-   signal p_avm_burstcount    : std_logic_vector(7 downto 0);
-   signal p_avm_readdata      : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
-   signal p_avm_readdatavalid : std_logic;
-   signal p_avm_waitrequest   : std_logic;
+   signal s_avm_write          : std_logic;
+   signal s_avm_read           : std_logic;
+   signal s_avm_address        : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
+   signal s_avm_writedata      : std_logic_vector(C_SLAVE_DATA_SIZE-1 downto 0);
+   signal s_avm_byteenable     : std_logic_vector(C_SLAVE_DATA_SIZE/8-1 downto 0);
+   signal s_avm_burstcount     : std_logic_vector(7 downto 0);
+   signal s_avm_readdata       : std_logic_vector(C_SLAVE_DATA_SIZE-1 downto 0);
+   signal s_avm_readdatavalid  : std_logic;
+   signal s_avm_waitrequest    : std_logic;
+
+   signal m_avm_write          : std_logic;
+   signal m_avm_read           : std_logic;
+   signal m_avm_address        : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
+   signal m_avm_writedata      : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
+   signal m_avm_byteenable     : std_logic_vector(C_MASTER_DATA_SIZE/8-1 downto 0);
+   signal m_avm_burstcount     : std_logic_vector(7 downto 0);
+   signal m_avm_readdata       : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
+   signal m_avm_readdatavalid  : std_logic;
+   signal m_avm_waitrequest    : std_logic;
+
+   signal mp_avm_write         : std_logic;
+   signal mp_avm_read          : std_logic;
+   signal mp_avm_address       : std_logic_vector(C_ADDRESS_SIZE-1 downto 0);
+   signal mp_avm_writedata     : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
+   signal mp_avm_byteenable    : std_logic_vector(C_MASTER_DATA_SIZE/8-1 downto 0);
+   signal mp_avm_burstcount    : std_logic_vector(7 downto 0);
+   signal mp_avm_readdata      : std_logic_vector(C_MASTER_DATA_SIZE-1 downto 0);
+   signal mp_avm_readdatavalid : std_logic;
+   signal mp_avm_waitrequest   : std_logic;
 
    signal stop_test : std_logic := '0';
    constant C_CLK_PERIOD : time := 10 ns;
@@ -85,16 +96,50 @@ begin
       port map (
          clk_i               => clk,
          rst_i               => rst,
-         avm_write_o         => s_avm_write,
-         avm_read_o          => s_avm_read,
-         avm_address_o       => s_avm_address,
-         avm_writedata_o     => s_avm_writedata,
-         avm_byteenable_o    => s_avm_byteenable,
-         avm_burstcount_o    => s_avm_burstcount,
-         avm_readdata_i      => s_avm_readdata,
-         avm_readdatavalid_i => s_avm_readdatavalid,
-         avm_waitrequest_i   => s_avm_waitrequest
+         avm_write_o         => sp_avm_write,
+         avm_read_o          => sp_avm_read,
+         avm_address_o       => sp_avm_address,
+         avm_writedata_o     => sp_avm_writedata,
+         avm_byteenable_o    => sp_avm_byteenable,
+         avm_burstcount_o    => sp_avm_burstcount,
+         avm_readdata_i      => sp_avm_readdata,
+         avm_readdatavalid_i => sp_avm_readdatavalid,
+         avm_waitrequest_i   => sp_avm_waitrequest
       ); -- i_trafic_gen
+
+
+   ---------------------------------------------------------
+   -- Generate pauses in master trafic
+   ---------------------------------------------------------
+
+   i_avm_pause_master : entity work.avm_pause
+      generic map (
+         G_PAUSE        => 3,
+         G_ADDRESS_SIZE => C_ADDRESS_SIZE,
+         G_DATA_SIZE    => C_SLAVE_DATA_SIZE
+      )
+      port map (
+         clk_i                 => clk,
+         rst_i                 => rst,
+         s_avm_write_i         => sp_avm_write,
+         s_avm_read_i          => sp_avm_read,
+         s_avm_address_i       => sp_avm_address,
+         s_avm_writedata_i     => sp_avm_writedata,
+         s_avm_byteenable_i    => sp_avm_byteenable,
+         s_avm_burstcount_i    => sp_avm_burstcount,
+         s_avm_readdata_o      => sp_avm_readdata,
+         s_avm_readdatavalid_o => sp_avm_readdatavalid,
+         s_avm_waitrequest_o   => sp_avm_waitrequest,
+         m_avm_write_o         => s_avm_write,
+         m_avm_read_o          => s_avm_read,
+         m_avm_address_o       => s_avm_address,
+         m_avm_writedata_o     => s_avm_writedata,
+         m_avm_byteenable_o    => s_avm_byteenable,
+         m_avm_burstcount_o    => s_avm_burstcount,
+         m_avm_readdata_i      => s_avm_readdata,
+         m_avm_readdatavalid_i => s_avm_readdatavalid,
+         m_avm_waitrequest_i   => s_avm_waitrequest
+      ); -- i_avm_pause_master
 
 
    ---------------------------------------------------------
@@ -130,22 +175,12 @@ begin
          m_avm_waitrequest_i    => m_avm_waitrequest
       ); -- i_avm_decrease
 
---   m_avm_write         <= s_avm_write;
---   m_avm_read          <= s_avm_read;
---   m_avm_address       <= s_avm_address;
---   m_avm_writedata     <= s_avm_writedata;
---   m_avm_byteenable    <= s_avm_byteenable;
---   m_avm_burstcount    <= s_avm_burstcount;
---   s_avm_readdata      <= m_avm_readdata;
---   s_avm_readdatavalid <= m_avm_readdatavalid;
---   s_avm_waitrequest   <= m_avm_waitrequest;
-
 
    ---------------------------------------------------------
    -- Generate pauses in slave reception
    ---------------------------------------------------------
 
-   i_avm_pause : entity work.avm_pause
+   i_avm_pause_slave : entity work.avm_pause
       generic map (
          G_PAUSE        => 2,
          G_ADDRESS_SIZE => C_ADDRESS_SIZE,
@@ -163,26 +198,16 @@ begin
          s_avm_readdata_o      => m_avm_readdata,
          s_avm_readdatavalid_o => m_avm_readdatavalid,
          s_avm_waitrequest_o   => m_avm_waitrequest,
-         m_avm_write_o         => p_avm_write,
-         m_avm_read_o          => p_avm_read,
-         m_avm_address_o       => p_avm_address,
-         m_avm_writedata_o     => p_avm_writedata,
-         m_avm_byteenable_o    => p_avm_byteenable,
-         m_avm_burstcount_o    => p_avm_burstcount,
-         m_avm_readdata_i      => p_avm_readdata,
-         m_avm_readdatavalid_i => p_avm_readdatavalid,
-         m_avm_waitrequest_i   => p_avm_waitrequest
-      ); -- i_avm_pause
-
---   p_avm_write          <= m_avm_write;
---   p_avm_read           <= m_avm_read;
---   p_avm_address        <= m_avm_address;
---   p_avm_writedata      <= m_avm_writedata;
---   p_avm_byteenable     <= m_avm_byteenable;
---   p_avm_burstcount     <= m_avm_burstcount;
---   m_avm_readdata       <= p_avm_readdata;
---   m_avm_readdatavalid  <= p_avm_readdatavalid;
---   m_avm_waitrequest    <= p_avm_waitrequest;
+         m_avm_write_o         => mp_avm_write,
+         m_avm_read_o          => mp_avm_read,
+         m_avm_address_o       => mp_avm_address,
+         m_avm_writedata_o     => mp_avm_writedata,
+         m_avm_byteenable_o    => mp_avm_byteenable,
+         m_avm_burstcount_o    => mp_avm_burstcount,
+         m_avm_readdata_i      => mp_avm_readdata,
+         m_avm_readdatavalid_i => mp_avm_readdatavalid,
+         m_avm_waitrequest_i   => mp_avm_waitrequest
+      ); -- i_avm_pause_slave
 
 
    ---------------------------------------------------------
@@ -197,15 +222,15 @@ begin
       port map (
          clk_i               => clk,
          rst_i               => rst,
-         avm_write_i         => p_avm_write,
-         avm_read_i          => p_avm_read,
-         avm_address_i       => p_avm_address,
-         avm_writedata_i     => p_avm_writedata,
-         avm_byteenable_i    => p_avm_byteenable,
-         avm_burstcount_i    => p_avm_burstcount,
-         avm_readdata_o      => p_avm_readdata,
-         avm_readdatavalid_o => p_avm_readdatavalid,
-         avm_waitrequest_o   => p_avm_waitrequest
+         avm_write_i         => mp_avm_write,
+         avm_read_i          => mp_avm_read,
+         avm_address_i       => mp_avm_address,
+         avm_writedata_i     => mp_avm_writedata,
+         avm_byteenable_i    => mp_avm_byteenable,
+         avm_burstcount_i    => mp_avm_burstcount,
+         avm_readdata_o      => mp_avm_readdata,
+         avm_readdatavalid_o => mp_avm_readdatavalid,
+         avm_waitrequest_o   => mp_avm_waitrequest
       ); -- i_mem
 
 end architecture simulation;
