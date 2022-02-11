@@ -6,6 +6,7 @@ use ieee.numeric_std.all;
 
 entity avm_decrease is
    generic (
+      G_ADDRESS_SIZE     : integer;
       G_SLAVE_DATA_SIZE  : integer; -- Must be a multiple of G_MASTER_DATA_SIZE
       G_MASTER_DATA_SIZE : integer
    );
@@ -16,7 +17,7 @@ entity avm_decrease is
       -- Slave interface (input)
       s_avm_write_i         : in  std_logic;
       s_avm_read_i          : in  std_logic;
-      s_avm_address_i       : in  std_logic_vector(31 downto 0);
+      s_avm_address_i       : in  std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
       s_avm_writedata_i     : in  std_logic_vector(G_SLAVE_DATA_SIZE-1 downto 0);
       s_avm_byteenable_i    : in  std_logic_vector(G_SLAVE_DATA_SIZE/8-1 downto 0);
       s_avm_burstcount_i    : in  std_logic_vector(7 downto 0);
@@ -27,7 +28,7 @@ entity avm_decrease is
       -- Master interface (output)
       m_avm_write_o         : out std_logic;
       m_avm_read_o          : out std_logic;
-      m_avm_address_o       : out std_logic_vector(31 downto 0);
+      m_avm_address_o       : out std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
       m_avm_writedata_o     : out std_logic_vector(G_MASTER_DATA_SIZE-1 downto 0);
       m_avm_byteenable_o    : out std_logic_vector(G_MASTER_DATA_SIZE/8-1 downto 0);
       m_avm_burstcount_o    : out std_logic_vector(7 downto 0);
@@ -45,7 +46,7 @@ architecture synthesis of avm_decrease is
 
    signal s_avm_write      : std_logic;
    signal s_avm_read       : std_logic;
-   signal s_avm_address    : std_logic_vector(31 downto 0);
+   signal s_avm_address    : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
    signal s_avm_writedata  : std_logic_vector(G_SLAVE_DATA_SIZE-1 downto 0);
    signal s_avm_byteenable : std_logic_vector(G_SLAVE_DATA_SIZE/8-1 downto 0);
    signal s_avm_burstcount : std_logic_vector(7 downto 0);
@@ -64,8 +65,8 @@ begin
    begin
       if rising_edge(clk_i) then
          if m_avm_waitrequest_i = '0' then
-            m_avm_write_o <= '0';
-            m_avm_read_o  <= '0';
+            s_avm_write <= '0';
+            s_avm_read  <= '0';
          end if;
 
          case state is
@@ -83,7 +84,7 @@ begin
                end if;
 
             when BUSY_ST =>
-               if m_avm_waitrequest_i = '1' then
+               if m_avm_waitrequest_i = '0' then
                   s_pos <= s_pos + 1;
 
                   if s_pos+2 = C_RATIO then
@@ -93,10 +94,10 @@ begin
          end case;
 
          if rst_i = '1' then
-            m_avm_write_o <= '0';
-            m_avm_read_o  <= '0';
-            s_pos         <= 0;
-            state         <= IDLE_ST;
+            s_avm_write <= '0';
+            s_avm_read  <= '0';
+            s_pos       <= 0;
+            state       <= IDLE_ST;
          end if;
 
       end if;
@@ -108,9 +109,9 @@ begin
    m_avm_writedata_o     <= s_avm_writedata(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos);
    m_avm_byteenable_o    <= s_avm_byteenable(G_MASTER_DATA_SIZE/8*s_pos + G_MASTER_DATA_SIZE/8-1 downto G_MASTER_DATA_SIZE/8*s_pos);
    m_avm_burstcount_o    <= s_avm_burstcount;
-   s_avm_readdata_o      <= m_avm_readdata_i;
+--   s_avm_readdata_o      <= m_avm_readdata_i;
    s_avm_readdatavalid_o <= m_avm_readdatavalid_i;
-   s_avm_waitrequest_o   <= '1' when state = IDLE_ST else '0';
+   s_avm_waitrequest_o   <= '0' when state = IDLE_ST else '1';
 
 end architecture synthesis;
 
