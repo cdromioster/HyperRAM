@@ -51,7 +51,7 @@ architecture synthesis of avm_decrease is
    signal s_avm_byteenable : std_logic_vector(G_SLAVE_DATA_SIZE/8-1 downto 0);
    signal s_avm_burstcount : std_logic_vector(7 downto 0);
 
-   type t_state is (IDLE_ST, BUSY_ST);
+   type t_state is (IDLE_ST, WRITING_ST, READING_ST);
    signal state : t_state := IDLE_ST;
 
    signal s_pos : integer range 0 to C_RATIO-1;
@@ -64,6 +64,8 @@ begin
    p_fsm : process (clk_i)
    begin
       if rising_edge(clk_i) then
+         s_avm_readdatavalid_o <= '0';
+
          if m_avm_waitrequest_i = '0' then
             s_avm_write <= '0';
             s_avm_read  <= '0';
@@ -80,21 +82,37 @@ begin
                   s_avm_byteenable <= s_avm_byteenable_i;
                   s_avm_burstcount <= std_logic_vector(to_unsigned(C_RATIO, 8));
                   s_pos            <= 0;
-                  state            <= BUSY_ST;
+                  if s_avm_write_i = '1' then
+                     state         <= WRITING_ST;
+                  else
+                     state         <= READING_ST;
+                  end if;
                end if;
 
-            when BUSY_ST =>
+            when WRITING_ST =>
                if m_avm_waitrequest_i = '0' then
                   s_pos <= s_pos + 1;
 
-                  -- Preserve values from previous clock cycle
+                  -- Preserve value from previous clock cycle
                   s_avm_write <= s_avm_write;
-                  s_avm_read  <= s_avm_read;
 
                   if s_pos+2 = C_RATIO then
-                     state       <= IDLE_ST;
+                     state <= IDLE_ST;
                   end if;
                end if;
+
+            when READING_ST =>
+               if m_avm_readdatavalid_i = '1' then
+                  s_avm_readdata_o(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos) <= m_avm_readdata_i;
+
+                  if s_pos+1 = C_RATIO then
+                     state <= IDLE_ST;
+                     s_avm_readdatavalid_o <= '1';
+                  else
+                     s_pos <= s_pos + 1;
+                  end if;
+               end if;
+
          end case;
 
          if rst_i = '1' then
@@ -107,15 +125,13 @@ begin
       end if;
    end process p_fsm;
 
-   m_avm_write_o         <= s_avm_write;
-   m_avm_read_o          <= s_avm_read;
-   m_avm_address_o       <= s_avm_address;
-   m_avm_writedata_o     <= s_avm_writedata(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos);
-   m_avm_byteenable_o    <= s_avm_byteenable(G_MASTER_DATA_SIZE/8*s_pos + G_MASTER_DATA_SIZE/8-1 downto G_MASTER_DATA_SIZE/8*s_pos);
-   m_avm_burstcount_o    <= s_avm_burstcount;
---   s_avm_readdata_o      <= m_avm_readdata_i;
-   s_avm_readdatavalid_o <= m_avm_readdatavalid_i;
-   s_avm_waitrequest_o   <= '0' when state = IDLE_ST else '1';
+   m_avm_write_o       <= s_avm_write;
+   m_avm_read_o        <= s_avm_read;
+   m_avm_address_o     <= s_avm_address;
+   m_avm_writedata_o   <= s_avm_writedata(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos);
+   m_avm_byteenable_o  <= s_avm_byteenable(G_MASTER_DATA_SIZE/8*s_pos + G_MASTER_DATA_SIZE/8-1 downto G_MASTER_DATA_SIZE/8*s_pos);
+   m_avm_burstcount_o  <= s_avm_burstcount;
+   s_avm_waitrequest_o <= '0' when state = IDLE_ST else '1';
 
 end architecture synthesis;
 

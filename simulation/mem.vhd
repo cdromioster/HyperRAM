@@ -29,16 +29,23 @@ architecture simulation of mem is
 
    signal mem : mem_t;
 
-   signal burstcount  : std_logic_vector(7 downto 0);
-   signal address     : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+   signal write_burstcount     : std_logic_vector(7 downto 0);
+   signal write_address        : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
 
-   signal mem_burstcount : std_logic_vector(7 downto 0);
-   signal mem_address    : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+   signal read_burstcount      : std_logic_vector(7 downto 0);
+   signal read_address         : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+
+   signal mem_write_burstcount : std_logic_vector(7 downto 0);
+   signal mem_read_burstcount  : std_logic_vector(7 downto 0);
+   signal mem_write_address    : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+   signal mem_read_address     : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
 
 begin
 
-   mem_address    <= avm_address_i    when burstcount = X"00" else address;
-   mem_burstcount <= avm_burstcount_i when burstcount = X"00" else burstcount;
+   mem_write_address    <= avm_address_i    when write_burstcount = X"00" else write_address;
+   mem_read_address     <= avm_address_i    when read_burstcount = X"00" else read_address;
+   mem_write_burstcount <= avm_burstcount_i when write_burstcount = X"00" else write_burstcount;
+   mem_read_burstcount  <= avm_burstcount_i when read_burstcount = X"00" else read_burstcount;
 
    avm_waitrequest_o <= '0';
 
@@ -47,27 +54,34 @@ begin
       if rising_edge(clk_i) then
          avm_readdatavalid_o <= '0';
 
-         address <= std_logic_vector(unsigned(mem_address) + 1);
+         write_address <= std_logic_vector(unsigned(mem_write_address) + 1);
+         read_address <= std_logic_vector(unsigned(mem_read_address) + 1);
 
          if avm_write_i = '1' and avm_waitrequest_o = '0' then
-            burstcount <= std_logic_vector(unsigned(mem_burstcount) - 1);
+            write_burstcount <= std_logic_vector(unsigned(mem_write_burstcount) - 1);
 
-            report "Writing 0x" & to_hstring(avm_writedata_i) & " to 0x" & to_hstring(mem_address) &
-                   " with burstcount " & to_hstring(burstcount);
+            report "Writing 0x" & to_hstring(avm_writedata_i) & " to 0x" & to_hstring(mem_write_address) &
+                   " with burstcount " & to_hstring(write_burstcount);
             for b in 0 to G_DATA_SIZE/8-1 loop
                if avm_byteenable_i(b) = '1' then
-                  mem(to_integer(unsigned(mem_address)))(8*b+7 downto 8*b) <= avm_writedata_i(8*b+7 downto 8*b);
+                  mem(to_integer(unsigned(mem_write_address)))(8*b+7 downto 8*b) <= avm_writedata_i(8*b+7 downto 8*b);
                end if;
             end loop;
          end if;
 
-         if avm_read_i = '1' and avm_waitrequest_o = '0' then
-            avm_readdata_o <= mem(to_integer(unsigned(mem_address)));
+         if (avm_read_i = '1' and avm_waitrequest_o = '0') or to_integer(unsigned(read_burstcount)) > 0 then
+            read_burstcount <= std_logic_vector(unsigned(mem_read_burstcount) - 1);
+
+            avm_readdata_o <= mem(to_integer(unsigned(mem_read_address)));
             avm_readdatavalid_o <= '1';
+
+            report "Reading 0x" & to_hstring(mem(to_integer(unsigned(mem_read_address)))) & " from 0x" & to_hstring(mem_read_address) &
+                   " with burstcount " & to_hstring(read_burstcount);
          end if;
 
          if rst_i = '1' then
-            burstcount <= (others => '0');
+            write_burstcount <= (others => '0');
+            read_burstcount <= (others => '0');
          end if;
       end if;
    end process p_mem;
