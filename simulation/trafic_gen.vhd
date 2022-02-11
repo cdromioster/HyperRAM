@@ -24,12 +24,14 @@ end entity trafic_gen;
 
 architecture simulation of trafic_gen is
 
-   constant C_DATA_INIT  : std_logic_vector(63 downto 0) := X"CAFEBABEDEADBEEF";
-   constant C_WORD_COUNT : integer := G_DATA_SIZE/16; -- 16 bits in each word
+   constant C_DATA_INIT   : std_logic_vector(63 downto 0) := X"CAFEBABEDEADBEEF";
+   constant C_BURST_COUNT : integer := 2;
+   constant C_WORD_COUNT  : integer := C_BURST_COUNT*G_DATA_SIZE/16; -- 16 bits in each word
 
    signal data           : std_logic_vector(63 downto 0);
    signal new_address    : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
    signal new_data       : std_logic_vector(63 downto 0);
+   signal new_burstcount : std_logic_vector(7 downto 0);
 
    type state_t is (
       INIT_ST,
@@ -45,9 +47,12 @@ begin
 
    -- The pseudo-random data is generated using a 64-bit maximal-period Galois LFSR,
    -- see http://users.ece.cmu.edu/~koopman/lfsr/64.txt
-   new_data    <= (data(62 downto 0) & "0") xor x"000000000000001b" when data(63) = '1' else
-                  (data(62 downto 0) & "0");
-   new_address <= std_logic_vector(unsigned(avm_address_o) + C_WORD_COUNT);
+   new_data       <= (data(62 downto 0) & "0") xor x"000000000000001b" when data(63) = '1' else
+                     (data(62 downto 0) & "0");
+   new_address    <= avm_address_o when unsigned(avm_burstcount_o) > 1 else
+                     std_logic_vector(unsigned(avm_address_o) + C_WORD_COUNT);
+   new_burstcount <= std_logic_vector(unsigned(avm_burstcount_o) - 1) when unsigned(avm_burstcount_o) > 1 else
+                     std_logic_vector(to_unsigned(C_BURST_COUNT, 8));
 
    p_fsm : process (clk_i)
    begin
@@ -63,9 +68,8 @@ begin
                avm_write_o      <= '1';
                avm_read_o       <= '0';
                avm_address_o    <= (others => '0');
-               avm_writedata_o  <= C_DATA_INIT(G_DATA_SIZE-1 downto 0);
                avm_byteenable_o <= (others => '1');
-               avm_burstcount_o <= X"01";
+               avm_burstcount_o <= std_logic_vector(to_unsigned(C_BURST_COUNT, 8));
                state            <= WRITING_ST;
 
             when WRITING_ST =>
@@ -73,13 +77,12 @@ begin
                   avm_write_o      <= '1';
                   avm_read_o       <= '0';
                   avm_address_o    <= new_address;
-                  avm_writedata_o  <= new_data(G_DATA_SIZE-1 downto 0);
                   avm_byteenable_o <= (others => '1');
-                  avm_burstcount_o <= X"01";
+                  avm_burstcount_o <= new_burstcount;
 
-                  data    <= new_data;
+                  data <= new_data;
 
-                  if signed(avm_address_o) = -C_WORD_COUNT then
+                  if signed(avm_address_o) = -C_WORD_COUNT and unsigned(avm_burstcount_o) = 1 then
                      data          <= C_DATA_INIT;
                      avm_write_o   <= '0';
                      avm_address_o <= (others => '0');
@@ -99,15 +102,19 @@ begin
                   if avm_readdata_i /= data(G_DATA_SIZE-1 downto 0) then
                      report "ERROR: Expected " & to_hstring(data(G_DATA_SIZE-1 downto 0)) & ", read " & to_hstring(avm_readdata_i);
                      state  <= STOPPED_ST;
-                  elsif signed(avm_address_o) = -C_WORD_COUNT then
+                  elsif signed(avm_address_o) = -C_WORD_COUNT and unsigned(avm_burstcount_o) = 1 then
                      report "Test stopped";
-                     data  <= C_DATA_INIT;
-                     state <= STOPPED_ST;
+                     data       <= C_DATA_INIT;
+                     avm_read_o <= '0';
+                     state      <= STOPPED_ST;
                   else
-                     avm_address_o <= new_address;
-                     data          <= new_data;
-                     avm_read_o    <= '1';
-                     state         <= READING_ST;
+                     data             <= new_data;
+                     avm_burstcount_o <= new_burstcount;
+                     avm_address_o    <= new_address;
+                     if unsigned(avm_burstcount_o) = 1 then
+                        avm_read_o    <= '1';
+                        state         <= READING_ST;
+                     end if;
                   end if;
                end if;
 
@@ -122,6 +129,8 @@ begin
          end if;
       end if;
    end process p_fsm;
+
+   avm_writedata_o <= data(G_DATA_SIZE-1 downto 0);
 
 end architecture simulation;
 

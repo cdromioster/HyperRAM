@@ -54,7 +54,6 @@ architecture simulation of tb_avm_decrease is
    signal mp_avm_readdatavalid : std_logic;
    signal mp_avm_waitrequest   : std_logic;
 
-   signal stop_test : std_logic := '0';
    constant C_CLK_PERIOD : time := 10 ns;
 
 begin
@@ -65,13 +64,10 @@ begin
 
    p_clk : process
    begin
-      while stop_test = '0' loop
-         clk <= '1';
-         wait for C_CLK_PERIOD/2;
-         clk <= '0';
-         wait for C_CLK_PERIOD/2;
-      end loop;
-      wait;
+      clk <= '1';
+      wait for C_CLK_PERIOD/2;
+      clk <= '0';
+      wait for C_CLK_PERIOD/2;
    end process p_clk;
 
    p_rst : process

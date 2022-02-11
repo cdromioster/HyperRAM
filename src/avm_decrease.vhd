@@ -51,10 +51,11 @@ architecture synthesis of avm_decrease is
    signal s_avm_byteenable : std_logic_vector(G_SLAVE_DATA_SIZE/8-1 downto 0);
    signal s_avm_burstcount : std_logic_vector(7 downto 0);
 
-   type t_state is (IDLE_ST, WRITING_ST, READING_ST);
+   type t_state is (IDLE_ST, WRITING_ST);
    signal state : t_state := IDLE_ST;
 
-   signal s_pos : integer range 0 to C_RATIO-1;
+   signal s_write_pos : integer range 0 to C_RATIO-1;
+   signal s_read_pos  : integer range 0 to C_RATIO-1;
 
 begin
 
@@ -71,45 +72,42 @@ begin
             s_avm_read  <= '0';
          end if;
 
+         if m_avm_readdatavalid_i = '1' then
+            s_avm_readdata_o(G_MASTER_DATA_SIZE*s_read_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_read_pos) <= m_avm_readdata_i;
+
+            if s_read_pos+1 = C_RATIO then
+               s_read_pos <= 0;
+               s_avm_readdatavalid_o <= '1';
+            else
+               s_read_pos <= s_read_pos + 1;
+            end if;
+         end if;
+
          case state is
             when IDLE_ST =>
                if (s_avm_write_i = '1' or s_avm_read_i = '1') and not (m_avm_write_o = '1' and m_avm_waitrequest_i = '1') then
-                  assert s_avm_burstcount_i = X"01";   -- TBD
                   s_avm_write      <= s_avm_write_i;
                   s_avm_read       <= s_avm_read_i;
                   s_avm_address    <= s_avm_address_i;
                   s_avm_writedata  <= s_avm_writedata_i;
                   s_avm_byteenable <= s_avm_byteenable_i;
-                  s_avm_burstcount <= std_logic_vector(to_unsigned(C_RATIO, 8));
-                  s_pos            <= 0;
+                  s_avm_burstcount <= std_logic_vector(to_unsigned(C_RATIO * to_integer(unsigned(s_avm_burstcount_i)), 8));
+                  s_write_pos      <= 0;
+                  s_read_pos       <= 0;
                   if s_avm_write_i = '1' then
                      state         <= WRITING_ST;
-                  else
-                     state         <= READING_ST;
                   end if;
                end if;
 
             when WRITING_ST =>
                if m_avm_waitrequest_i = '0' then
-                  s_pos <= s_pos + 1;
+                  s_write_pos <= s_write_pos + 1;
 
                   -- Preserve value from previous clock cycle
                   s_avm_write <= s_avm_write;
 
-                  if s_pos+2 = C_RATIO then
+                  if s_write_pos+2 = C_RATIO then
                      state <= IDLE_ST;
-                  end if;
-               end if;
-
-            when READING_ST =>
-               if m_avm_readdatavalid_i = '1' then
-                  s_avm_readdata_o(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos) <= m_avm_readdata_i;
-
-                  if s_pos+1 = C_RATIO then
-                     state <= IDLE_ST;
-                     s_avm_readdatavalid_o <= '1';
-                  else
-                     s_pos <= s_pos + 1;
                   end if;
                end if;
 
@@ -118,7 +116,8 @@ begin
          if rst_i = '1' then
             s_avm_write <= '0';
             s_avm_read  <= '0';
-            s_pos       <= 0;
+            s_write_pos <= 0;
+            s_read_pos  <= 0;
             state       <= IDLE_ST;
          end if;
 
@@ -128,8 +127,8 @@ begin
    m_avm_write_o       <= s_avm_write;
    m_avm_read_o        <= s_avm_read;
    m_avm_address_o     <= s_avm_address;
-   m_avm_writedata_o   <= s_avm_writedata(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos);
-   m_avm_byteenable_o  <= s_avm_byteenable(G_MASTER_DATA_SIZE/8*s_pos + G_MASTER_DATA_SIZE/8-1 downto G_MASTER_DATA_SIZE/8*s_pos);
+   m_avm_writedata_o   <= s_avm_writedata(G_MASTER_DATA_SIZE*s_write_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_write_pos);
+   m_avm_byteenable_o  <= s_avm_byteenable(G_MASTER_DATA_SIZE/8*s_write_pos + G_MASTER_DATA_SIZE/8-1 downto G_MASTER_DATA_SIZE/8*s_write_pos);
    m_avm_burstcount_o  <= s_avm_burstcount;
    s_avm_waitrequest_o <= (m_avm_write_o and m_avm_waitrequest_i) when state = IDLE_ST else '1';
 
