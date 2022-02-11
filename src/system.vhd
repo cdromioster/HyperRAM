@@ -53,7 +53,8 @@ begin
 
    i_trafic_gen : entity work.trafic_gen
       generic map (
-         G_ADDRESS_SIZE => G_ADDRESS_SIZE
+         G_ADDRESS_SIZE => G_ADDRESS_SIZE,
+         G_DATA_SIZE    => 16
       )
       port map (
          clk_i               => clk_i,
@@ -61,7 +62,7 @@ begin
          start_i             => start_i,
          avm_write_o         => avm_write,
          avm_read_o          => avm_read,
-         avm_address_o       => avm_address,
+         avm_address_o       => avm_address(G_ADDRESS_SIZE-1 downto 0),
          avm_writedata_o     => avm_writedata,
          avm_byteenable_o    => avm_byteenable,
          avm_burstcount_o    => avm_burstcount,
@@ -74,6 +75,7 @@ begin
          active_o            => active_o,
          error_o             => error_o
       ); -- i_trafic_gen
+   avm_address(31 downto G_ADDRESS_SIZE) <= (others => '0');
 
 
    --------------------------------------------------------
