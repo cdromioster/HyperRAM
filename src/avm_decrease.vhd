@@ -73,7 +73,7 @@ begin
 
          case state is
             when IDLE_ST =>
-               if s_avm_write_i = '1' or s_avm_read_i = '1' then
+               if (s_avm_write_i = '1' or s_avm_read_i = '1') and not (m_avm_write_o = '1' and m_avm_waitrequest_i = '1') then
                   assert s_avm_burstcount_i = X"01";   -- TBD
                   s_avm_write      <= s_avm_write_i;
                   s_avm_read       <= s_avm_read_i;
@@ -131,7 +131,7 @@ begin
    m_avm_writedata_o   <= s_avm_writedata(G_MASTER_DATA_SIZE*s_pos + G_MASTER_DATA_SIZE-1 downto G_MASTER_DATA_SIZE*s_pos);
    m_avm_byteenable_o  <= s_avm_byteenable(G_MASTER_DATA_SIZE/8*s_pos + G_MASTER_DATA_SIZE/8-1 downto G_MASTER_DATA_SIZE/8*s_pos);
    m_avm_burstcount_o  <= s_avm_burstcount;
-   s_avm_waitrequest_o <= '0' when state = IDLE_ST else '1';
+   s_avm_waitrequest_o <= (m_avm_write_o and m_avm_waitrequest_i) when state = IDLE_ST else '1';
 
 end architecture synthesis;
 

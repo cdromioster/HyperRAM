@@ -54,10 +54,8 @@ begin
       if rising_edge(clk_i) then
          avm_readdatavalid_o <= '0';
 
-         write_address <= std_logic_vector(unsigned(mem_write_address) + 1);
-         read_address <= std_logic_vector(unsigned(mem_read_address) + 1);
-
          if avm_write_i = '1' and avm_waitrequest_o = '0' then
+            write_address <= std_logic_vector(unsigned(mem_write_address) + 1);
             write_burstcount <= std_logic_vector(unsigned(mem_write_burstcount) - 1);
 
             report "Writing 0x" & to_hstring(avm_writedata_i) & " to 0x" & to_hstring(mem_write_address) &
@@ -70,6 +68,7 @@ begin
          end if;
 
          if (avm_read_i = '1' and avm_waitrequest_o = '0') or to_integer(unsigned(read_burstcount)) > 0 then
+            read_address <= std_logic_vector(unsigned(mem_read_address) + 1);
             read_burstcount <= std_logic_vector(unsigned(mem_read_burstcount) - 1);
 
             avm_readdata_o <= mem(to_integer(unsigned(mem_read_address)));
@@ -81,7 +80,7 @@ begin
 
          if rst_i = '1' then
             write_burstcount <= (others => '0');
-            read_burstcount <= (others => '0');
+            read_burstcount  <= (others => '0');
          end if;
       end if;
    end process p_mem;

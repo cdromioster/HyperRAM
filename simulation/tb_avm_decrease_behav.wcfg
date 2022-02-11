@@ -10,15 +10,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="103600fs"></ZoomStartTime>
-      <ZoomEndTime time="322001fs"></ZoomEndTime>
-      <Cursor1Time time="100000fs"></Cursor1Time>
+      <ZoomStartTime time="98701fs"></ZoomStartTime>
+      <ZoomEndTime time="176902fs"></ZoomEndTime>
+      <Cursor1Time time="144701fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="290"></NameColumnWidth>
-      <ValueColumnWidth column_width="130"></ValueColumnWidth>
+      <ValueColumnWidth column_width="120"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="23" />
+   <WVObjectSize size="5" />
    <wvobject type="logic" fp_name="/tb_avm_decrease/clk">
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
@@ -27,124 +27,57 @@
       <obj_property name="ElementShortName">rst</obj_property>
       <obj_property name="ObjectShortName">rst</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/s_avm_write">
-      <obj_property name="ElementShortName">s_avm_write</obj_property>
-      <obj_property name="ObjectShortName">s_avm_write</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/s_avm_read">
-      <obj_property name="ElementShortName">s_avm_read</obj_property>
-      <obj_property name="ObjectShortName">s_avm_read</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/s_avm_address">
-      <obj_property name="ElementShortName">s_avm_address[2:0]</obj_property>
-      <obj_property name="ObjectShortName">s_avm_address[2:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/s_avm_writedata">
-      <obj_property name="ElementShortName">s_avm_writedata[31:0]</obj_property>
-      <obj_property name="ObjectShortName">s_avm_writedata[31:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/s_avm_byteenable">
-      <obj_property name="ElementShortName">s_avm_byteenable[3:0]</obj_property>
-      <obj_property name="ObjectShortName">s_avm_byteenable[3:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/s_avm_burstcount">
-      <obj_property name="ElementShortName">s_avm_burstcount[7:0]</obj_property>
-      <obj_property name="ObjectShortName">s_avm_burstcount[7:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/s_avm_readdata">
-      <obj_property name="ElementShortName">s_avm_readdata[31:0]</obj_property>
-      <obj_property name="ObjectShortName">s_avm_readdata[31:0]</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/s_avm_readdatavalid">
-      <obj_property name="ElementShortName">s_avm_readdatavalid</obj_property>
-      <obj_property name="ObjectShortName">s_avm_readdatavalid</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/s_avm_waitrequest">
-      <obj_property name="ElementShortName">s_avm_waitrequest</obj_property>
-      <obj_property name="ObjectShortName">s_avm_waitrequest</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/m_avm_write">
-      <obj_property name="ElementShortName">m_avm_write</obj_property>
-      <obj_property name="ObjectShortName">m_avm_write</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/m_avm_read">
-      <obj_property name="ElementShortName">m_avm_read</obj_property>
-      <obj_property name="ObjectShortName">m_avm_read</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/m_avm_address">
-      <obj_property name="ElementShortName">m_avm_address[2:0]</obj_property>
-      <obj_property name="ObjectShortName">m_avm_address[2:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/m_avm_writedata">
-      <obj_property name="ElementShortName">m_avm_writedata[15:0]</obj_property>
-      <obj_property name="ObjectShortName">m_avm_writedata[15:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/m_avm_byteenable">
-      <obj_property name="ElementShortName">m_avm_byteenable[1:0]</obj_property>
-      <obj_property name="ObjectShortName">m_avm_byteenable[1:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/m_avm_burstcount">
-      <obj_property name="ElementShortName">m_avm_burstcount[7:0]</obj_property>
-      <obj_property name="ObjectShortName">m_avm_burstcount[7:0]</obj_property>
-   </wvobject>
-   <wvobject type="array" fp_name="/tb_avm_decrease/m_avm_readdata">
-      <obj_property name="ElementShortName">m_avm_readdata[15:0]</obj_property>
-      <obj_property name="ObjectShortName">m_avm_readdata[15:0]</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/m_avm_readdatavalid">
-      <obj_property name="ElementShortName">m_avm_readdatavalid</obj_property>
-      <obj_property name="ObjectShortName">m_avm_readdatavalid</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/tb_avm_decrease/m_avm_waitrequest">
-      <obj_property name="ElementShortName">m_avm_waitrequest</obj_property>
-      <obj_property name="ObjectShortName">m_avm_waitrequest</obj_property>
-   </wvobject>
-   <wvobject type="other" fp_name="/tb_avm_decrease/i_trafic_gen/state">
-      <obj_property name="ElementShortName">state</obj_property>
-      <obj_property name="ObjectShortName">state</obj_property>
-   </wvobject>
-   <wvobject type="group" fp_name="group228">
-      <obj_property name="label">mem</obj_property>
+   <wvobject type="group" fp_name="group509">
+      <obj_property name="label">trafic_gen</obj_property>
       <obj_property name="DisplayName">label</obj_property>
-      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_write_i">
-         <obj_property name="ElementShortName">avm_write_i</obj_property>
-         <obj_property name="ObjectShortName">avm_write_i</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_trafic_gen/avm_write_o">
+         <obj_property name="ElementShortName">avm_write_o</obj_property>
+         <obj_property name="ObjectShortName">avm_write_o</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_read_i">
-         <obj_property name="ElementShortName">avm_read_i</obj_property>
-         <obj_property name="ObjectShortName">avm_read_i</obj_property>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_trafic_gen/avm_read_o">
+         <obj_property name="ElementShortName">avm_read_o</obj_property>
+         <obj_property name="ObjectShortName">avm_read_o</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_address_i">
-         <obj_property name="ElementShortName">avm_address_i[2:0]</obj_property>
-         <obj_property name="ObjectShortName">avm_address_i[2:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/avm_address_o">
+         <obj_property name="ElementShortName">avm_address_o[2:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_address_o[2:0]</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_writedata_i">
-         <obj_property name="ElementShortName">avm_writedata_i[15:0]</obj_property>
-         <obj_property name="ObjectShortName">avm_writedata_i[15:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/avm_writedata_o">
+         <obj_property name="ElementShortName">avm_writedata_o[31:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_writedata_o[31:0]</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_byteenable_i">
-         <obj_property name="ElementShortName">avm_byteenable_i[1:0]</obj_property>
-         <obj_property name="ObjectShortName">avm_byteenable_i[1:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/avm_byteenable_o">
+         <obj_property name="ElementShortName">avm_byteenable_o[3:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_byteenable_o[3:0]</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_burstcount_i">
-         <obj_property name="ElementShortName">avm_burstcount_i[7:0]</obj_property>
-         <obj_property name="ObjectShortName">avm_burstcount_i[7:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/avm_burstcount_o">
+         <obj_property name="ElementShortName">avm_burstcount_o[7:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_burstcount_o[7:0]</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_readdata_o">
-         <obj_property name="ElementShortName">avm_readdata_o[15:0]</obj_property>
-         <obj_property name="ObjectShortName">avm_readdata_o[15:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/avm_readdata_i">
+         <obj_property name="ElementShortName">avm_readdata_i[31:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_readdata_i[31:0]</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_readdatavalid_o">
-         <obj_property name="ElementShortName">avm_readdatavalid_o</obj_property>
-         <obj_property name="ObjectShortName">avm_readdatavalid_o</obj_property>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_trafic_gen/avm_readdatavalid_i">
+         <obj_property name="ElementShortName">avm_readdatavalid_i</obj_property>
+         <obj_property name="ObjectShortName">avm_readdatavalid_i</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_waitrequest_o">
-         <obj_property name="ElementShortName">avm_waitrequest_o</obj_property>
-         <obj_property name="ObjectShortName">avm_waitrequest_o</obj_property>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_trafic_gen/avm_waitrequest_i">
+         <obj_property name="ElementShortName">avm_waitrequest_i</obj_property>
+         <obj_property name="ObjectShortName">avm_waitrequest_i</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/mem">
-         <obj_property name="ElementShortName">mem[0:7][15:0]</obj_property>
-         <obj_property name="ObjectShortName">mem[0:7][15:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/address">
+         <obj_property name="ElementShortName">address[2:0]</obj_property>
+         <obj_property name="ObjectShortName">address[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_trafic_gen/data">
+         <obj_property name="ElementShortName">data[63:0]</obj_property>
+         <obj_property name="ObjectShortName">data[63:0]</obj_property>
+      </wvobject>
+      <wvobject type="other" fp_name="/tb_avm_decrease/i_trafic_gen/state">
+         <obj_property name="ElementShortName">state</obj_property>
+         <obj_property name="ObjectShortName">state</obj_property>
       </wvobject>
    </wvobject>
    <wvobject type="group" fp_name="group91">
@@ -262,6 +195,83 @@
       <wvobject type="other" fp_name="/tb_avm_decrease/i_avm_decrease/s_pos">
          <obj_property name="ElementShortName">s_pos</obj_property>
          <obj_property name="ObjectShortName">s_pos</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group701">
+      <obj_property name="label">mem</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_write_i">
+         <obj_property name="ElementShortName">avm_write_i</obj_property>
+         <obj_property name="ObjectShortName">avm_write_i</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_read_i">
+         <obj_property name="ElementShortName">avm_read_i</obj_property>
+         <obj_property name="ObjectShortName">avm_read_i</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_address_i">
+         <obj_property name="ElementShortName">avm_address_i[2:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_address_i[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_writedata_i">
+         <obj_property name="ElementShortName">avm_writedata_i[15:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_writedata_i[15:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_byteenable_i">
+         <obj_property name="ElementShortName">avm_byteenable_i[1:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_byteenable_i[1:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_burstcount_i">
+         <obj_property name="ElementShortName">avm_burstcount_i[7:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_burstcount_i[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/avm_readdata_o">
+         <obj_property name="ElementShortName">avm_readdata_o[15:0]</obj_property>
+         <obj_property name="ObjectShortName">avm_readdata_o[15:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_readdatavalid_o">
+         <obj_property name="ElementShortName">avm_readdatavalid_o</obj_property>
+         <obj_property name="ObjectShortName">avm_readdatavalid_o</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb_avm_decrease/i_mem/avm_waitrequest_o">
+         <obj_property name="ElementShortName">avm_waitrequest_o</obj_property>
+         <obj_property name="ObjectShortName">avm_waitrequest_o</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/mem">
+         <obj_property name="ElementShortName">mem[0:7][15:0]</obj_property>
+         <obj_property name="ObjectShortName">mem[0:7][15:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/write_burstcount">
+         <obj_property name="ElementShortName">write_burstcount[7:0]</obj_property>
+         <obj_property name="ObjectShortName">write_burstcount[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/write_address">
+         <obj_property name="ElementShortName">write_address[2:0]</obj_property>
+         <obj_property name="ObjectShortName">write_address[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/read_burstcount">
+         <obj_property name="ElementShortName">read_burstcount[7:0]</obj_property>
+         <obj_property name="ObjectShortName">read_burstcount[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/read_address">
+         <obj_property name="ElementShortName">read_address[2:0]</obj_property>
+         <obj_property name="ObjectShortName">read_address[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/mem_write_burstcount">
+         <obj_property name="ElementShortName">mem_write_burstcount[7:0]</obj_property>
+         <obj_property name="ObjectShortName">mem_write_burstcount[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/mem_read_burstcount">
+         <obj_property name="ElementShortName">mem_read_burstcount[7:0]</obj_property>
+         <obj_property name="ObjectShortName">mem_read_burstcount[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/mem_write_address">
+         <obj_property name="ElementShortName">mem_write_address[2:0]</obj_property>
+         <obj_property name="ObjectShortName">mem_write_address[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/tb_avm_decrease/i_mem/mem_read_address">
+         <obj_property name="ElementShortName">mem_read_address[2:0]</obj_property>
+         <obj_property name="ObjectShortName">mem_read_address[2:0]</obj_property>
       </wvobject>
    </wvobject>
 </wave_config>

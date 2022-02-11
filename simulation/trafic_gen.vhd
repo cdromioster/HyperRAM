@@ -27,8 +27,10 @@ architecture simulation of trafic_gen is
    constant C_DATA_INIT : std_logic_vector(63 downto 0) := X"CAFEBABEDEADBEEF";
    constant C_WORD_COUNT : integer := G_DATA_SIZE/16; -- 16 bits in each word
 
-   signal address : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
-   signal data    : std_logic_vector(63 downto 0);
+   signal address     : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+   signal data        : std_logic_vector(63 downto 0);
+   signal new_address : std_logic_vector(G_ADDRESS_SIZE-1 downto 0);
+   signal new_data    : std_logic_vector(63 downto 0);
 
    type state_t is (
       INIT_ST,
@@ -42,6 +44,12 @@ architecture simulation of trafic_gen is
 
 begin
 
+   -- The pseudo-random data is generated using a 64-bit maximal-period Galois LFSR,
+   -- see http://users.ece.cmu.edu/~koopman/lfsr/64.txt
+   new_data <= (data(62 downto 0) & "0") xor x"000000000000001b" when data(63) = '1' else
+               (data(62 downto 0) & "0");
+   new_address <= std_logic_vector(unsigned(address) + C_WORD_COUNT);
+
    p_fsm : process (clk_i)
    begin
       if rising_edge(clk_i) then
@@ -52,68 +60,59 @@ begin
 
          case state is
             when INIT_ST =>
-               address  <= (others => '0');
-               data     <= C_DATA_INIT;
-               state    <= WRITING_ST;
-
-            when WRITING_ST =>
+               address          <= (others => '0');
+               data             <= C_DATA_INIT;
                avm_write_o      <= '1';
                avm_read_o       <= '0';
                avm_address_o    <= (others => '0');
-               avm_address_o(G_ADDRESS_SIZE-1 downto 0) <= address;
-               avm_writedata_o  <= data(G_DATA_SIZE-1 downto 0);
+               avm_writedata_o  <= C_DATA_INIT(G_DATA_SIZE-1 downto 0);
                avm_byteenable_o <= (others => '1');
                avm_burstcount_o <= X"01";
+               state            <= WRITING_ST;
 
-               if avm_write_o = '1' and avm_waitrequest_i = '0' then
-                  -- Increment address linearly
-                  address <= std_logic_vector(unsigned(address) + C_WORD_COUNT);
+            when WRITING_ST =>
+               if avm_waitrequest_i = '0' then
+                  avm_write_o      <= '1';
+                  avm_read_o       <= '0';
+                  avm_address_o    <= (others => '0');
+                  avm_address_o(G_ADDRESS_SIZE-1 downto 0) <= new_address;
+                  avm_writedata_o  <= new_data(G_DATA_SIZE-1 downto 0);
+                  avm_byteenable_o <= (others => '1');
+                  avm_burstcount_o <= X"01";
 
-                  -- The pseudo-random data is generated using a 64-bit maximal-period Galois LFSR,
-                  -- see http://users.ece.cmu.edu/~koopman/lfsr/64.txt
-                  if data(63) = '1' then
-                     data <= (data(62 downto 0) & "0") xor X"000000000000001B";
-                  else
-                     data <= (data(62 downto 0) & "0");
-                  end if;
+                  address <= new_address;
+                  data    <= new_data;
 
                   if signed(address) = -C_WORD_COUNT then
-                     data  <= C_DATA_INIT;
-                     state <= READING_ST;
+                     data          <= C_DATA_INIT;
+                     avm_write_o   <= '0';
+                     avm_address_o <= (others => '0');
+                     avm_read_o    <= '1';
+                     state         <= READING_ST;
                   end if;
                end if;
 
             when READING_ST =>
-               avm_write_o      <= '0';
-               avm_read_o       <= '1';
-               avm_address_o    <= (others => '0');
-               avm_address_o(G_ADDRESS_SIZE-1 downto 0) <= address;
-               avm_burstcount_o <= X"01";
-
-               if avm_read_o = '1' and avm_waitrequest_i = '0' then
-                  avm_read_o  <= '0';
-                  state       <= VERIFYING_ST;
+               if avm_waitrequest_i = '0' then
+                  state <= VERIFYING_ST;
                end if;
 
             when VERIFYING_ST =>
                if avm_readdatavalid_i = '1' then
 
-                  address <= std_logic_vector(unsigned(address) + C_WORD_COUNT);
-                  if data(63) = '1' then
-                     data <= (data(62 downto 0) & "0") xor X"000000000000001B";
-                  else
-                     data <= (data(62 downto 0) & "0");
-                  end if;
-
                   if avm_readdata_i /= data(G_DATA_SIZE-1 downto 0) then
                      report "ERROR: Expected " & to_hstring(data(G_DATA_SIZE-1 downto 0)) & ", read " & to_hstring(avm_readdata_i);
---                     state    <= STOPPED_ST;
+                     state  <= STOPPED_ST;
                   elsif signed(address) = -C_WORD_COUNT then
                      report "Test stopped";
                      data  <= C_DATA_INIT;
                      state <= STOPPED_ST;
                   else
-                     state <= READING_ST;
+                     avm_address_o <= new_address;
+                     address       <= new_address;
+                     data          <= new_data;
+                     avm_read_o    <= '1';
+                     state         <= READING_ST;
                   end if;
                end if;
 
