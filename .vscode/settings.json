@@ -1,0 +1,21 @@
+{
+	"editor.bracketPairColorization.enabled": true, // turn on bracket pair coloring
+	"editor.guides.bracketPairs": "active", // turn on bracket pair guides
+	// Customize formatting command to suite preferences
+	"systemverilog.formatCommand": "verible-verilog-format --assignment_statement_alignment=preserve --case_items_alignment=infer --class_member_variables_alignment=infer --formal_parameters_alignment=preserve --formal_parameters_indentation=indent --named_parameter_alignment=flush-left --named_parameter_indentation=indent --named_port_alignment=flush-left --named_port_indentation=indent --net_variable_alignment=preserve --port_declarations_alignment=preserve --port_declarations_indentation=indent",
+	// Add additional file extensions to associate with SystemVerilog and include them in the indexing
+	"files.associations": {
+	  "*.svi": "systemverilog",
+	  "*.svp": "systemverilog",
+	  "*.pkg": "systemverilog"
+	},
+	"systemverilog.includeIndexing": ["**/*.{sv,v,svh,vh,svi,svp,pkg}"],
+	"search.exclude": {
+        "**/.vscode": true
+    },
+    "files.exclude": {
+        "**/.git": true
+	},
+	"systemverilog.compileOnSave": true,
+	"systemverilog.compileOnOpen": true
+}

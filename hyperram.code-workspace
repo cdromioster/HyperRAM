@@ -1,0 +1,45 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"extensions": {"recommendations": [
+		//"chipsalliance.verible",
+		"mshr-h.veriloghdl",
+		"aaron-bond.better-comments",
+		"eamodio.gitlens",
+		"eirikpre.systemverilog"
+		]
+	},
+	"settings": {
+		"[verilog]": {
+			"editor.defaultFormatter": "eirikpre.systemverilog",
+			"editor.detectIndentation": false,
+			"editor.insertSpaces": true,
+			"editor.formatOnSave": false,
+			"editor.autoIndent": "advanced",
+			"editor.tabSize": 4
+        },
+		"[systemverilog]": {
+			"editor.defaultFormatter": "eirikpre.systemverilog",
+			"editor.detectIndentation": false,
+			"editor.insertSpaces": true,
+			"editor.formatOnSave": false,
+			"editor.autoIndent": "advanced",
+			"editor.tabSize": 4
+		},
+		"verilog.linting.linter": "verilator",
+		//"verilog.linting.verilator.arguments": "--timing",
+		"verilog.languageServer.veribleVerilogLs.enabled": true,
+		"systemverilog.parallelProcessing": 8,
+		"systemverilog.disableIndexing": true,
+		"systemverilog.enableIncrementalIndexing": true,
+		"systemverilog.excludeIndexing": "**/build/**",
+		"verilog.linting.verilator.includePath": [
+			"src/hyperram/",
+			"HyperRAM_Simulation_Model/"
+		],
+		"verilog.linting.verilator.arguments": "--timing -I\"src/hyperram/\" -I\"HyperRAM_Simulation_Model/\""
+    }
+}
